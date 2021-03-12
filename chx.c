@@ -1,3 +1,5 @@
+#include "chx.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -9,68 +11,53 @@
 #define enter() system("tput smcup")
 #define exit() system("tput rmcup")
 #define cls() system("clear")
-#define cur_set(X, Y) printf("\033[%d;%dH", Y + 1, X + 1)
+#define cur_set(X, Y) printf("\033[%ld;%ldH", Y + 1, X + 1)
 
-struct CHX_GLOBAL_CONFIG {
-	struct chx_fdata* instances;
-	int num_instances, sel_instance;
-	int theight, twidth;
-	int bytes_per_row, bytes_in_last_row;
-	int num_rows, num_digits, npr;
-	int section_start;
-} CHX_GC;
-
-// get the version of a key with ctrl pressed
-#ifndef CTRL
-#define CTRL(c) ((c) & 037)
-#endif
-
-char getch() {
-        char buf = 0;
-        struct termios old = {0};
-        if (tcgetattr(0, &old) < 0)
-                perror("tcsetattr()");
-        old.c_lflag &= ~ICANON;
-        old.c_lflag &= ~ECHO;
-        old.c_cc[VMIN] = 1;
-        old.c_cc[VTIME] = 0;
-        if (tcsetattr(0, TCSANOW, &old) < 0)
-                perror("tcsetattr ICANON");
-        if (read(0, &buf, 1) < 0)
-                perror ("read()");
-        old.c_lflag |= ICANON;
-        old.c_lflag |= ECHO;
-        if (tcsetattr(0, TCSADRAIN, &old) < 0)
-                perror ("tcsetattr ~ICANON");
-        return buf;
-}
-
-struct chx_fdata {
-	unsigned char* data;
-	long len;
-};
-
-struct chx_fdata chx_load(char* fpath) {
-	struct chx_fdata fdata;
+struct chx_finfo chx_import(char* fpath) {
+	struct chx_finfo finfo;
 	FILE* inf = fopen(fpath, "r+b");
-	if (!inf) inf = fopen(fpath, "w+b");
 	fseek(inf, 0, SEEK_END);
 	long flen = ftell(inf);
 	rewind(inf);
-	fdata.len = flen;
-	fdata.data = malloc(flen);
-	fread(fdata.data, 1, flen, inf);
+	finfo.len = flen;
+	finfo.data = malloc(flen);
+	fread(finfo.data, 1, flen, inf);
 	fclose(inf);
-	return fdata;
+	return finfo;
 }
 
 void chx_export(char* fpath) {
 	FILE* outf = fopen(fpath, "w+b");
-	fwrite(CHX_GC.instances[CHX_GC.sel_instance].data, 1, CHX_GC.instances[CHX_GC.sel_instance].len, outf);
+	fwrite(CHXGC.instances[CHXGC.sel_instance].data, 1, CHXGC.instances[CHXGC.sel_instance].len, outf);
 	fclose(outf);
 }
 
-int chx_num_digits(long num) {
+void chx_save_dialoge() {
+	// setup user input buffer
+	char usrin[256];
+	
+	// print save dialoge and recieve user input
+	cur_set(0, CHXGC.theight);
+	printf("SAVE AS? (LEAVE EMPTY TO CANCEL): ");
+	fflush(stdout);
+	
+	fgets(usrin, 256, stdin);
+	
+	// cut input at first newline
+	usrin[strcspn(usrin, "\n")] = 0;
+	
+	// only export if filename was entered
+	if (usrin[0]) chx_export(usrin);
+	
+	// erase save dialoge
+	printf("\033[1A\033[2K");
+	fflush(stdout);
+	
+	// redraw contents
+	chx_draw_contents();
+}
+
+int chx_count_digits(long num) {
 	int count = 1;
 	while (num > 15) {
 		num /= 16;
@@ -79,143 +66,254 @@ int chx_num_digits(long num) {
 	return count;
 }
 
-struct chx_cursor {
-	int x, y;
-	char blink : 1;
-	char light : 1;
-	char color : 2;
-	char sbpos : 4;
-};
-
 void chx_draw_contents() {
-	for (int j = 0; j < CHX_GC.npr - 1; j++)
-		for (int i = 0; i < CHX_GC.bytes_per_row; i++)
-			printf("\033[%d;%dH %02X", j + 2, CHX_GC.num_digits + 2 + i * 4, CHX_GC.instances[CHX_GC.sel_instance].data[j * CHX_GC.bytes_per_row + i]);
-	if (CHX_GC.num_rows == CHX_GC.npr - 1) for (int i = 0; i < CHX_GC.bytes_in_last_row; i++) printf("\033[%d;%dH %02X", CHX_GC.npr + 1, CHX_GC.num_digits + 2 + i * 4, CHX_GC.instances[CHX_GC.sel_instance].data[(CHX_GC.npr - 1) * CHX_GC.bytes_per_row + i]);
+	// save sursor position
+	int tmp_curx = CHXCUR.x, tmp_cury = CHXCUR.y;
+	
+	// reset cursor
+	cur_set(0, 0);
+	
+	// print header
+	printf("%-*c", CHXGC.num_digits + 1, ' ');
+	for (int i = 0; i < CHXGC.bytes_per_row; i++) printf(" \e[1;34m%02X \e[m", i);
+	
+	// print row numbers
+	for (int i = CHXGC.section_start; i < CHXGC.rows_in_section + CHXGC.section_start + 1; i++) printf("\e[1;34m\033[%d;0H %0*X \e[m", i - CHXGC.section_start + 2, CHXGC.num_digits, i * CHXGC.bytes_per_row);
+	
+	// print main contents
+	for (int j = CHXGC.section_start; j < CHXGC.section_start + CHXGC.rows_in_section + 1; j++)
+		for (int i = 0; i < CHXGC.bytes_per_row; i++)
+			printf("\033[%d;%dH %02X", j - CHXGC.section_start + 2, CHXGC.num_digits + 2 + i * 4, CHXGC.instances[CHXGC.sel_instance].data[j * CHXGC.bytes_per_row + i]);
+	
+	// print last row of bytes
+	if (CHXGC.num_rows == CHXGC.section_start + CHXGC.rows_in_section - 1) for (int i = 0; i < CHXGC.bytes_in_last_row; i++) printf("\033[%d;%dH %02X", CHXGC.rows_in_section + 1, CHXGC.num_digits + 2 + i * 4, CHXGC.instances[CHXGC.sel_instance].data[(CHXGC.rows_in_section - 1) * CHXGC.bytes_per_row + i]);
+	
+	// restore cursor position
+	cur_set(CHXGC.num_digits + 2 + CHXCUR.x * 4 + CHXCUR.sbpos, CHXCUR.y + 1 - CHXGC.section_start);
+	
+	fflush(stdout);
+}
+
+void chx_cursor_move_up() {
+	CHXCUR.y -= CHXCUR.y > 0;
+	cur_set(CHXGC.num_digits + 2 + CHXCUR.x * 4 + CHXCUR.sbpos, CHXCUR.y + 1 - CHXGC.section_start);
+		if (CHXCUR.y < CHXGC.section_start) {
+			CHXGC.section_start--;
+			chx_draw_contents();
+		}
+}
+
+void chx_cursor_move_down() {
+	if (!(CHXCUR.y >= CHXGC.rows_in_section - 2 && CHXCUR.x >= CHXGC.bytes_in_last_row && CHXGC.section_start + CHXGC.theight - 1 > CHXGC.num_rows)) {
+		CHXCUR.y = (CHXCUR.y >= CHXGC.num_rows) ? 0 : CHXCUR.y + 1;
+		cur_set(CHXGC.num_digits + 2 + CHXCUR.x * 4 + CHXCUR.sbpos, CHXCUR.y + 1 - CHXGC.section_start);
+		if (CHXCUR.y - CHXGC.section_start > CHXGC.theight - 1) {
+			CHXGC.section_start++;
+			chx_draw_contents();
+		}
+	}
+}
+
+void chx_cursor_move_right() {
+	char is_end = (CHXCUR.y >= CHXGC.rows_in_section - 1 && CHXCUR.x >= CHXGC.bytes_in_last_row - 1 && CHXGC.section_start + CHXGC.theight - 1 > CHXGC.num_rows);
+	if (CHXCUR.sbpos < 1) CHXCUR.sbpos++;
+	else if (!is_end) {
+		CHXCUR.sbpos = 0;
+		CHXCUR.x = (CHXCUR.x >= CHXGC.bytes_per_row - 1) ? 0 : CHXCUR.x + 1;
+	}
+	cur_set(CHXGC.num_digits + 2 + CHXCUR.x * 4 + CHXCUR.sbpos, CHXCUR.y + 1 - CHXGC.section_start);
+}
+
+void chx_cursor_move_left() {
+	if (CHXCUR.sbpos > 0) CHXCUR.sbpos--;
+	else {
+		if (CHXCUR.x) CHXCUR.sbpos = 1;
+		CHXCUR.x -= (CHXCUR.x) && 1;
+	}
+}
+
+void chx_main() {
+	// draw content
+	chx_draw_contents();
+	
+	// main loop
+	for(char key;; key = chx_getch()) {
+		// mode setting and movement keys are global
+		switch (key) {
+			case '\033': // ANSI escape sequence
+				chx_getch(); // skip '[' char
+				switch (chx_getch()) { // read escape char
+					case KEY_UP:
+						chx_cursor_move_up();
+						break;
+					case KEY_DOWN:
+						chx_cursor_move_down();
+						break;
+					case KEY_RIGHT:
+						chx_cursor_move_right();
+						break;
+					case KEY_LEFT:
+						chx_cursor_move_left();
+						break;
+				}
+				
+				// update cursor
+				cur_set(CHXGC.num_digits + 2 + CHXCUR.x * 4 + CHXCUR.sbpos, CHXCUR.y + 1 - CHXGC.section_start);
+				
+				fflush(stdout);
+				break;
+			case CTRL('i'): // toggle between command and type mode
+				if (CHXGC.mode == CHX_MODE_TYPE_HEXCHAR) CHXGC.mode = CHX_MODE_DEFAULT;
+				else CHXGC.mode = CHX_MODE_TYPE_HEXCHAR;
+				break;
+			case CTRL('w'): // save
+				chx_export(CHXGC.instances[CHXGC.sel_instance].filename);
+				
+				// remove unsaved data highlight
+				chx_draw_contents();
+				break;
+			case CTRL('e'): // export
+				chx_save_dialoge();
+				break;
+			case CHX_CTRL('x'): // quit
+				return;
+			default:
+				// keys have different actions depending on active mode setting
+				switch (CHXGC.mode) {
+					default:
+					case CHX_MODE_DEFAULT:
+						switch (key) {
+							case '\033': // ANSI escape sequence
+								chx_getch(); // skip '[' char
+								switch (chx_getch()) { // read escape char
+									default:
+										break;
+								}
+								break;
+							case 'q': // quit
+								return;
+							case 's': // save
+								chx_export(CHXGC.instances[CHXGC.sel_instance].filename);
+								
+								// remove unsaved data highlight
+								chx_draw_contents();
+								break;
+							case 'w': // save as
+								chx_save_dialoge();
+								break;
+						}
+						break;
+					case CHX_MODE_TYPE_DEFAULT:
+						break;
+					case CHX_MODE_TYPE_HEXCHAR:
+						if (IS_HEX_CHAR(key) || IS_DIGIT(key)) { // only accept hex characters
+							if ((key ^ 0x60) < 7) key -= 32; // ensure everything is upper-case
+							printf("\033[1;35m%c\033[0m\033[1D", key); // print the character on the screen
+							
+							// update stored file data
+							CHXGC.instances[CHXGC.sel_instance].data[CHXCUR.y * CHXGC.bytes_per_row + CHXCUR.x] &= 0xF0 << ((1 - CHXCUR.sbpos) * 4);
+							CHXGC.instances[CHXGC.sel_instance].data[CHXCUR.y * CHXGC.bytes_per_row + CHXCUR.x] |= ((char) strtol(&key, NULL, 16)) << ((1 - CHXCUR.sbpos) * 4);
+							
+							fflush(stdout);
+							
+							// move sursor after typing a char
+							// if the cursor is in a sub position, add to the sub position of the cursor, else change the selected byte
+							if (CHXCUR.sbpos < 1) CHXCUR.sbpos++;
+							else {
+								// set if the cursor is sttempting to move past the end of the file
+								char is_end = (CHXCUR.y >= CHXGC.rows_in_section - 1 && CHXCUR.x >= CHXGC.bytes_in_last_row - 1 && CHXGC.section_start + CHXGC.theight - 1 > CHXGC.num_rows);
+								CHXCUR.sbpos = 0;
+								if (is_end) CHXCUR.sbpos = 1;
+								else if (CHXCUR.x >= CHXGC.bytes_per_row - 1) {
+									CHXCUR.x = 0;
+									CHXCUR.y++;
+								} else CHXCUR.x++;
+							}
+							
+							// update cursor position on screen
+							cur_set(CHXGC.num_digits + 2 + CHXCUR.x * 4 + CHXCUR.sbpos, CHXCUR.y + 1 - CHXGC.section_start);
+							
+							fflush(stdout);
+						}
+						break;
+				}
+				break;
+		}
+	}
 }
 
 int main(int arc, char** argv) {
-	exit();
+	// enter new terminal state
 	enter();
-	char usrin[256];
 	
+	// get window dimensions
 	struct winsize size;
 	ioctl(0, TIOCGWINSZ, (char*) &size);
 	
-	struct chx_fdata hdata = chx_load(argv[1]);
+	// load file
+	struct chx_finfo hdata = chx_import(argv[1]);
+	hdata.filename = argv[1];
 	
-	int bytes_per_row = 16;
-	int bytes_in_last_row = hdata.len % bytes_per_row;
-	int num_rows = (hdata.len - bytes_in_last_row) / bytes_per_row;
-	int num_digits = chx_num_digits(num_rows);
-	int npr = (num_rows < size.ws_row) ? num_rows + 1 : size.ws_row;
-	int section_start = 0;
-	CHX_GC = (struct CHX_GLOBAL_CONFIG) {&hdata, 1, 0, size.ws_row, size.ws_col, bytes_per_row, bytes_in_last_row, num_rows, num_digits, npr, section_start};
+	// setup global variables
+	CHXGC.mode = 0;
+	CHXGC.instances = malloc(sizeof(struct chx_finfo));
+	CHXGC.instances[0] = hdata;
+	CHXGC.num_instances = 1;
+	CHXGC.sel_instance = 0;
+	CHXGC.theight = size.ws_row;
+	CHXGC.twidth = size.ws_col;
+	CHXGC.bytes_per_row = 16;
+	CHXGC.bytes_in_group = 2;
+	CHXGC.bytes_in_last_row = hdata.len % CHXGC.bytes_per_row;
+	CHXGC.num_rows = (hdata.len - CHXGC.bytes_in_last_row) / CHXGC.bytes_per_row;
+	CHXGC.num_digits = chx_count_digits(CHXGC.num_rows);
+	CHXGC.rows_in_section = (CHXGC.num_rows < size.ws_row) ? CHXGC.num_rows + 1 : size.ws_row - 2;
+	CHXGC.section_start = 1;
 	
-	cls();
-	printf("%-*c", num_digits + 1, ' ');
-	for (int i = 0; i < bytes_per_row; i++) printf(" \e[1;34m%02X \e[m", i);
-	for (int i = section_start; i < npr; i++) printf("\e[1;34m\033[%d;0H %0*X \e[m", i + 2, num_digits, i * bytes_per_row);
-	
-	chx_draw_contents();
-	
-	struct chx_cursor CURSOR = {0, 0, 0, 1, 3};
-	cur_set(CHX_GC.num_digits + 2 + CURSOR.x * 4, CURSOR.y + 1);
+	// initialize cursor
+	CHXCUR = (struct CHX_CURSOR) {0, 1, 0, 0};
+	cur_set(CHXGC.num_digits + 2 + CHXCUR.x * 4, CHXCUR.y + 1 - CHXGC.section_start);
 	fflush(stdout);
 	
-	for(char key; key != 'q'; key = getch()) {
-		if (key == ';') continue;
-		if ((key ^ 0x40) < 7 || (key ^ 0x60) < 7 || (key ^ 0x30) < 10) {
-			if ((key ^ 0x60) < 7) key -= 32;
-			printf("\033[1;35m%c\033[0m\033[1D", key);
-			CHX_GC.instances[CHX_GC.sel_instance].data[CURSOR.y * CHX_GC.bytes_per_row + CURSOR.x] &= 0xF0 << ((1 - CURSOR.sbpos) * 4);
-			CHX_GC.instances[CHX_GC.sel_instance].data[CURSOR.y * CHX_GC.bytes_per_row + CURSOR.x] |= ((char) strtol(&key, NULL, 16)) << ((1 - CURSOR.sbpos) * 4);
-			fflush(stdout);
-			if (CURSOR.sbpos < 1) CURSOR.sbpos++;
-			else {
-				char is_end = (CURSOR.y >= npr - 1 && CURSOR.x >= CHX_GC.bytes_in_last_row - 1);
-				CURSOR.sbpos = 0;
-				if (is_end) {
-					CURSOR.sbpos = 1;
-				} else if (CURSOR.x >= CHX_GC.bytes_per_row - 1) {
-					CURSOR.x = 0;
-					CURSOR.y++;
-				} else CURSOR.x++;
-			}
-			cur_set(CHX_GC.num_digits + 2 + CURSOR.x * 4 + CURSOR.sbpos, CURSOR.y + 1);
-			fflush(stdout);
-		} else {
-			switch(key) {
-				case 's':
-					chx_export(argv[1]);
-					break;
-				case 5:
-					for (int i = 0; i < 256; i++) usrin[i] = 0;
-					int tmp_curx = CURSOR.x, tmp_cury = CURSOR.y;
-					cur_set(0, CHX_GC.theight - 2);
-					printf("SAVE AS? (LEAVE EMPTY TO CANCEL): ");
-					fflush(stdout);
-					fgets(usrin, 256, stdin);
-					usrin[strcspn(usrin, "\n")] = 0;
-					if (usrin[0]) chx_export(usrin);
-					printf("\033[1A\033[2K");
-					fflush(stdout);
-					if (usrin[0]) chx_draw_contents();
-					cur_set(CHX_GC.num_digits + 2 + CURSOR.x * 4 + CURSOR.sbpos, CURSOR.y + 1);
-					fflush(stdout);
-					break;
-			}
-		}
-		if (key == '\033') {
-			getch();
-			char is_end = (CURSOR.y >= npr - 1 && CURSOR.x >= CHX_GC.bytes_in_last_row - 1);
-			switch(getch()) {
-				case 'A'://up
-					CURSOR.y -= CURSOR.y > 0;
-					cur_set(CHX_GC.num_digits + 2 + CURSOR.x * 4 + CURSOR.sbpos, CURSOR.y + 1);
-					break;
-				case 'B'://down
-					if (!(CURSOR.y >= npr - 2 && CURSOR.x >= CHX_GC.bytes_in_last_row)) {
-						CURSOR.y = (CURSOR.y >= npr - 1) ? 0 : CURSOR.y + 1;
-						cur_set(CHX_GC.num_digits + 2 + CURSOR.x * 4 + CURSOR.sbpos, CURSOR.y + 1);
-					}
-					break;
-				case 'C'://right
-					if (CURSOR.sbpos < 1) CURSOR.sbpos++;
-					else if (!is_end) {
-						CURSOR.sbpos = 0;
-						CURSOR.x = (CURSOR.x >= bytes_per_row - 1) ? 0 : CURSOR.x + 1;
-					}
-					cur_set(CHX_GC.num_digits + 2 + CURSOR.x * 4 + CURSOR.sbpos, CURSOR.y + 1);
-					break;
-				case 'D'://left
-					if (CURSOR.sbpos > 0) CURSOR.sbpos--;
-					else {
-						if (CURSOR.x) CURSOR.sbpos = 1;
-						CURSOR.x -= (CURSOR.x) && 1;
-					}
-					cur_set(CHX_GC.num_digits + 2 + CURSOR.x * 4 + CURSOR.sbpos, CURSOR.y + 1);
-					break;
-			}
-			fflush(stdout);
-		}
-	}
-	l_exit:
-	cur_set(0, CHX_GC.theight - 2);
-	for (int i = 0; i < 256; i++) usrin[i] = 0;
+	lb_return:
+	
+	// call main loop
+	chx_main();
+	
+	// after exiting ask if user would like to save
+	cur_set(0, CHXGC.theight);
 	printf("WOULD YOU LIKE TO SAVE? (Y / N): ");
-	switch (getchar()) {
+	
+	switch (fgetc(stdin)) {
 		case 'y':
 		case 'Y':
 			chx_export(argv[1]);
 			break;
 		default:
-			printf("\033[1A\033[2K");
-			goto l_exit;
+			cls();
+			goto lb_return;
 			break;
 		case 'n':
 		case 'N':
 			break;
 	}
+	
+	// restore terminal state
 	exit();
+}
+
+char chx_getch() {
+        char buf = 0;
+        struct termios old = {0};
+        tcgetattr(0, &old);
+        old.c_lflag &= ~ICANON;
+        old.c_lflag &= ~ECHO;
+        old.c_cc[VMIN] = 1;
+        old.c_cc[VTIME] = 0;
+        tcsetattr(0, TCSANOW, &old);
+        read(0, &buf, 1);
+        old.c_lflag |= ICANON;
+        old.c_lflag |= ECHO;
+        tcsetattr(0, TCSADRAIN, &old);
+        return buf;
 }
