@@ -1,6 +1,23 @@
 #ifndef __CHX_CAOIMH__
 #define __CHX_CAOIMH__
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <termios.h>
+#include <string.h>
+#include <sys/ioctl.h>
+
+#define tenter() system("tput smcup")
+#define texit() system("tput rmcup")
+#define cls() system("clear")
+#define cur_set(X, Y) printf("\033[%d;%dH", Y + 1, X + 1)
+
+#define TPD 1
+#define BPD 0
+#define PD TPD + BPD
+
 #define CHX_MODE_DEFAULT 		0
 #define CHX_MODE_TYPE_DEFAULT 	1
 #define CHX_MODE_TYPE_HEXCHAR 	2
@@ -25,8 +42,8 @@ struct CHX_GLOBAL_CONFIG {
 	char bytes_in_group;
 	char bytes_in_last_row;
 	char num_digits;
-	long num_rows;
-	long section_start;
+	int num_rows;
+	int section_start;
 	int rows_in_section;
 	int theight;
 	int twidth;
@@ -44,7 +61,12 @@ struct chx_finfo {
 	long len;
 };
 
-char chx_getch();
+struct chx_finfo chx_import(char* fpath);
+void chx_export(char* fpath);
+void chx_update_cursor();
 void chx_draw_contents();
+int chx_count_digits(long num);
+char chx_getch();
+void chx_main();
 
 #endif
