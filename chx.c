@@ -155,7 +155,7 @@ void chx_main() {
 	// main loop
 	for(char key;; key = chx_getch()) {
 		// control keys are global
-		if (chx_keybinds_global_control[CTRL(key)]) chx_keybinds_global_control[CTRL(key)]();
+		if (chx_keybinds_global[key]) chx_keybinds_global[key]();
 		
 		switch (key) {
 			// escape key and ansi escape keys
@@ -188,17 +188,10 @@ void chx_main() {
 							CHXGC.instances[CHXGC.sel_instance].data[CHXCUR.y * CHXGC.bytes_per_row + (CHXCUR.x * CHXGC.bytes_in_group) + CHXCUR.sbpos / 2] &= 0x0F << ((CHXCUR.sbpos % 2) * 4);
 							CHXGC.instances[CHXGC.sel_instance].data[CHXCUR.y * CHXGC.bytes_per_row + (CHXCUR.x * CHXGC.bytes_in_group) + CHXCUR.sbpos / 2] |= strtol(nullkey, NULL, 16) << (((CHXCUR.sbpos + 1) % 2) * 4);
 							cur_set(0, 0);
-							printf("shf: %i, m: %i, val: %02X : %02X", (((CHXCUR.sbpos + 1) % 2) * 4), (0x0F << ((CHXCUR.sbpos % 2) * 4)), strtol(nullkey, NULL, 16) << ((CHXCUR.sbpos % 2) * 4), key);
-							
-							fflush(stdout);
 							
 							// move cursor after typing a char
 							// if the cursor is in a sub position, add to the sub position of the cursor, else change the selected byte
-							if (CHXCUR.sbpos < CHXGC.bytes_in_group * 2 - 1) CHXCUR.sbpos++;
-							else if (CHXCUR.x < CHXGC.bytes_per_row / CHXGC.bytes_in_group - 1) CHXCUR.sbpos = 0, CHXCUR.x++;
-							else CHXCUR.sbpos = 0, CHXCUR.x = 0, CHXCUR.y++;
-							chx_update_cursor();
-							chx_update_cursor();
+							chx_cursor_move_right();
 						}
 						break;
 				}

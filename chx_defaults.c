@@ -20,14 +20,14 @@ void chx_cursor_move_down() {
 void chx_cursor_move_right() {
 	if (CHXCUR.sbpos < CHXGC.bytes_in_group * 2 - 1) CHXCUR.sbpos++;
 	else if (CHXCUR.x < CHXGC.bytes_per_row / CHXGC.bytes_in_group - 1) CHXCUR.sbpos = 0, CHXCUR.x++;
-	else CHXCUR.sbpos = 0, CHXCUR.x = 0;
+	else CHXCUR.sbpos = 0, CHXCUR.x = 0, CHXCUR.y++;
 	chx_update_cursor();
 }
 
 void chx_cursor_move_left() {
 	if (CHXCUR.sbpos > 0) CHXCUR.sbpos--;
-	else if (CHXCUR.x > 0) CHXCUR.sbpos = 1, CHXCUR.x--;
-	else CHXCUR.sbpos = CHXGC.bytes_in_group * 2 - 1, CHXCUR.x = CHXGC.bytes_per_row / CHXGC.bytes_in_group - 1;
+	else if (CHXCUR.x > 0) CHXCUR.sbpos = CHXGC.bytes_in_group * 2 - 1, CHXCUR.x--;
+	else if (CHXCUR.y > 0) CHXCUR.sbpos = CHXGC.bytes_in_group * 2 - 1, CHXCUR.x = CHXGC.bytes_per_row / CHXGC.bytes_in_group - 1, CHXCUR.y--;
 	chx_update_cursor();
 }
 
