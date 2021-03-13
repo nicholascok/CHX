@@ -6,15 +6,15 @@ void chx_type_mode_toggle() {
 }
 
 void chx_cursor_move_up() {
-	if (CHXCUR.y > 0) CHXCUR.y--;
-	if (CHXCUR.y < CHXGC.section_start) CHXGC.section_start--, chx_draw_contents();
-	chx_update_cursor();
+	CHXCUR.y -= (CHXCUR.y > 0);
+	CHXGC.section_start -= (CHXCUR.y < CHXGC.section_start);
+	chx_draw_contents();
 }
 
 void chx_cursor_move_down() {
-	if (CHXCUR.y < CHXGC.num_rows) CHXCUR.y++;
-	if (CHXCUR.y > CHXGC.section_start + CHXGC.rows_in_section - 1) CHXGC.section_start++, chx_draw_contents();
-	chx_update_cursor();
+	CHXCUR.y++;
+	CHXGC.section_start += (CHXCUR.y - CHXGC.section_start >= CHXGC.rows_in_section);
+	chx_draw_contents();
 }
 
 void chx_cursor_move_right() {
@@ -26,9 +26,35 @@ void chx_cursor_move_right() {
 
 void chx_cursor_move_left() {
 	if (CHXCUR.sbpos > 0) CHXCUR.sbpos--;
-	else if (CHXCUR.x > 0) CHXCUR.sbpos = CHXGC.bytes_in_group * 2 - 1, CHXCUR.x--;
-	else if (CHXCUR.y > 0) CHXCUR.sbpos = CHXGC.bytes_in_group * 2 - 1, CHXCUR.x = CHXGC.bytes_per_row / CHXGC.bytes_in_group - 1, CHXCUR.y--;
+	else {
+		CHXCUR.sbpos = CHXGC.bytes_in_group * 2 - 1;
+		if (CHXCUR.x > 0) CHXCUR.x--;
+		else if (CHXCUR.y > 0) CHXCUR.x = CHXGC.bytes_per_row / CHXGC.bytes_in_group - 1, CHXCUR.y--;
+		else CHXCUR.sbpos = 0;
+	}
 	chx_update_cursor();
+}
+
+void chx_update_cursor() {
+	cur_set(CHXGC.num_digits + 2 + CHXCUR.x * (2 + CHXGC.bytes_in_group * 2) + CHXCUR.sbpos, CHXCUR.y - CHXGC.section_start + TPD);
+	fflush(stdout);
+}
+
+void chx_type_hexchar(char _c) {
+	if (!IS_CHAR_HEX(_c)) return; // only accept hex characters
+	if ((_c ^ 0x60) < 7) _c -= 32; // ensure everything is upper-case
+	printf("\033[1;35m%c\033[0m\033[1D", _c); // print the character on the screen
+	
+	char nullkey[2] = {_c, 0};
+	
+	// update stored file data
+	CHXGC.instances[CHXGC.sel_instance].data[CHXCUR.y * CHXGC.bytes_per_row + (CHXCUR.x * CHXGC.bytes_in_group) + CHXCUR.sbpos / 2] &= 0x0F << ((CHXCUR.sbpos % 2) * 4);
+	CHXGC.instances[CHXGC.sel_instance].data[CHXCUR.y * CHXGC.bytes_per_row + (CHXCUR.x * CHXGC.bytes_in_group) + CHXCUR.sbpos / 2] |= strtol(nullkey, NULL, 16) << (((CHXCUR.sbpos + 1) % 2) * 4);
+	cur_set(0, 0);
+	
+	// move cursor after typing a char
+	// if the cursor is in a sub position, add to the sub position of the cursor, else change the selected byte
+	chx_cursor_move_right();
 }
 
 void chx_mode_set_insert() {

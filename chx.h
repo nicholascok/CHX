@@ -29,9 +29,9 @@
 
 #define CHX_CTRL(C) (C & 0x1F)
 
-#define IS_LETTER(C) (C ^ 0x40) < 26 || (C ^ 0x60) < 26
-#define IS_HEX_CHAR(C) (C ^ 0x40) < 7 || (C ^ 0x60) < 7
-#define IS_DIGIT(C) (C ^ 0x30) < 10
+#define IS_LETTER(C) ((C ^ 0x40) < 26 || (C ^ 0x60) < 26)
+#define IS_CHAR_HEX(C) ((C ^ 0x40) < 7 || (C ^ 0x60) < 7 || (C ^ 0x30) < 10)
+#define IS_DIGIT(C) ((C ^ 0x30) < 10)
 
 struct CHX_GLOBAL_CONFIG {
 	struct chx_finfo* instances;
