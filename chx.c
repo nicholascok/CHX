@@ -21,6 +21,16 @@ void chx_export(char* fpath) {
 	fclose(outf);
 }
 
+long min(long _a, long _b) {
+	if (_a < _b) return _a;
+	return _b;
+}
+
+long max(long _a, long _b) {
+	if (_a > _b) return _a;
+	return _b;
+}
+
 void chx_draw_contents() {
 	// print header
 	printf("\033[0;0H%-*c\e[1;34m", CINST.row_num_len + 1, ' ');
@@ -34,22 +44,17 @@ void chx_draw_contents() {
 	printf("\e[0m");
 	
 	// print main contents
-	cur_set(0, 0);
-	
 	for (int i = CINST.scroll_pos; i < CINST.scroll_pos + CINST.num_bytes; i++) {
 		if (!(i % CINST.bytes_per_row))
-			cur_set(CINST.row_num_len + 2, i / CINST.bytes_per_row + TPD);
+			cur_set(CINST.row_num_len + 2, (i - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
 		else if (!(i % CINST.bytes_in_group))
 			printf("  ");
 		if (i < CINST.fdata.len) {
-			if (CINST.selecting && i - CINST.cursor.pos < abs(CINST.cur_old.pos - CINST.cursor.pos))
-				printf("\e[7m");
-			else if (CINST.style_data[i / 8] & (0x80 >> (i % 8)))
-				printf("\e[1;33");
-				printf("%02X", CINST.fdata.data[i]);
-				printf("\e[0");
+			if (CINST.style_data[i / 8] & (0x80 >> (i % 8)))
+				printf("\e[1;33%02X\e[0m", CINST.fdata.data[i]);
 			else
-				printf("%02X", CINST.fdata.data[i]);
+				if (CINST.sel_start != CINST.sel_end && BETWEEN(i, CINST.sel_start, CINST.sel_end)) printf("\e[7m%02X\e[0m", CINST.fdata.data[i]);
+				else printf("%02X", CINST.fdata.data[i]);
 		} else
 			printf("..");
 	}
@@ -64,12 +69,13 @@ void chx_main() {
 	// draw content
 	chx_draw_contents();
 	char SELECTING = 0;
-	struct CHX_CURSOR CUR_OLD;
 	
 	// main loop
 	for(struct chx_key key;; key = chx_get_key()) {
 		// control keys are global
 		if (chx_keybinds_global[WORD(key)]) chx_keybinds_global[WORD(key)]();
+		if (CINST.selecting && key.type != 0x03) chx_finish_selection();
+		if (!CINST.selecting && CINST.cursor.pos != CINST.sel_end - 1) chx_clear_selection();
 		
 		// keys have different actions depending on active mode setting
 		switch (CINST.mode) {
@@ -80,12 +86,6 @@ void chx_main() {
 			case CHX_MODE_TYPE_HEXCHAR:
 				if (IS_CHAR_HEX(WORD(key))) chx_type_hexchar(WORD(key));
 				else if (WORD(key) == 0x7F) chx_backspace_hexchar();
-				if (key.type == 0x03) {
-					CUR_OLD = CINST.cursor;
-					SELECTING = 1;
-					printf("SELECTING\n");
-				}
-				else 
 				break;
 		}
 	}
@@ -173,9 +173,11 @@ int main(int arc, char** argv) {
 	CINST.num_rows = hdata.len / CINST.bytes_per_row;
 	CINST.row_num_len = 8;
 	CINST.num_rows = size.ws_row - PD;
+	CINST.num_bytes = CINST.num_rows * CINST.bytes_per_row;
 	CINST.scroll_pos = 0;
 	CINST.mode = 0;
 	CINST.saved = 1;
+	CINST.selecting = 0;
 	
 	// initialize cursor
 	CINST.cursor = (struct CHX_CURSOR) {0, 0};

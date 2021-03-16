@@ -27,6 +27,7 @@
 #define IS_DIGIT(C) ((C ^ 0x30) < 10)
 
 #define CINST CHX_INSTANCES[CHX_SEL_INSTANCE]
+#define BETWEEN(X, A, B) (X >= min(A, B) && X <= max(A, B))
 #define CHX_CURSOR_X (int) (CINST.row_num_len + 4 * (CINST.cursor.pos % CINST.bytes_per_row) + CINST.cursor.sbpos + 2)
 #define CHX_GET_CURSOR_Y (int) (CINST.cursor.pos / CINST.bytes_per_row - CINST.scroll_pos + TPD)
 #define WORD(X) *((uint16_t*) &X)
@@ -58,7 +59,11 @@ struct CHX_INSTANCE {
 	int x_offset;
 	int y_offset;
 	int scroll_pos;
+	int num_bytes;
 	int num_rows;
+	int selecting;
+	int sel_start;
+	int sel_end;
 	char mode;
 	char saved;
 };

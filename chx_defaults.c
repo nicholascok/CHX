@@ -31,6 +31,50 @@ void chx_cursor_move_left() {
 	}
 }
 
+void chx_start_selection() {
+	CINST.sel_start = CINST.cursor.pos;
+	CINST.selecting = 1;
+}
+
+void chx_finish_selection() {
+	CINST.selecting = 0;
+	chx_draw_contents();
+}
+
+void chx_clear_selection() {
+	CINST.sel_start = 0;
+	CINST.sel_end = 0;
+	chx_draw_contents();
+}
+
+void chx_cursor_select_up() {
+	if (!CINST.selecting) chx_start_selection();
+	chx_cursor_move_up();
+	CINST.sel_end = CINST.cursor.pos;
+	chx_draw_contents();
+}
+
+void chx_cursor_select_down() {
+	if (!CINST.selecting) chx_start_selection();
+	chx_cursor_move_down();
+	CINST.sel_end = CINST.cursor.pos;
+	chx_draw_contents();
+}
+
+void chx_cursor_select_right() {
+	if (!CINST.selecting) chx_start_selection();
+	chx_cursor_move_right();
+	CINST.sel_end = CINST.cursor.pos;
+	chx_draw_contents();
+}
+
+void chx_cursor_select_left() {
+	if (!CINST.selecting) chx_start_selection();
+	chx_cursor_move_left();
+	CINST.sel_end = CINST.cursor.pos;
+	chx_draw_contents();
+}
+
 void chx_update_cursor() {
 	cur_set(CHX_CURSOR_X, CHX_GET_CURSOR_Y);
 	fflush(stdout);
