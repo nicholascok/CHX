@@ -1,68 +1,99 @@
-#include "chx.h"
-
 void chx_type_mode_toggle() {
-	if (CHXGC.mode == CHX_MODE_TYPE_HEXCHAR) CHXGC.mode = CHX_MODE_DEFAULT;
-	else CHXGC.mode = CHX_MODE_TYPE_HEXCHAR;
+	if (CINST.mode == CHX_MODE_TYPE_HEXCHAR) CINST.mode = CHX_MODE_DEFAULT;
+	else CINST.mode = CHX_MODE_TYPE_HEXCHAR;
 }
 
 void chx_cursor_move_up() {
-	CHXCUR.y -= (CHXCUR.y > 0);
-	CHXGC.section_start -= (CHXCUR.y < CHXGC.section_start);
+	CINST.cursor.pos -= (CINST.cursor.pos >= CINST.bytes_per_row) * CINST.bytes_per_row;
+	CINST.scroll_pos -= (CINST.scroll_pos && CINST.cursor.pos - CINST.scroll_pos < 0) * CINST.bytes_per_row;
 	chx_draw_contents();
 }
 
 void chx_cursor_move_down() {
-	CHXCUR.y++;
-	CHXGC.section_start += (CHXCUR.y - CHXGC.section_start >= CHXGC.rows_in_section);
+	CINST.cursor.pos += CINST.bytes_per_row;
+	CINST.scroll_pos += (CINST.cursor.pos >= CINST.num_bytes + CINST.scroll_pos) * CINST.bytes_per_row;
 	chx_draw_contents();
 }
 
 void chx_cursor_move_right() {
-	if (CHXCUR.sbpos < CHXGC.bytes_in_group * 2 - 1) CHXCUR.sbpos++;
-	else if (CHXCUR.x < CHXGC.bytes_per_row / CHXGC.bytes_in_group - 1) CHXCUR.sbpos = 0, CHXCUR.x++;
-	else CHXCUR.sbpos = 0, CHXCUR.x = 0, CHXCUR.y++;
-	chx_update_cursor();
+	CINST.cursor.pos += (CINST.cursor.sbpos == 1);
+	CINST.cursor.sbpos = !CINST.cursor.sbpos;
+	CINST.scroll_pos += (CINST.cursor.pos >= CINST.num_bytes + CINST.scroll_pos) * CINST.bytes_per_row;
+	chx_draw_contents();
 }
 
 void chx_cursor_move_left() {
-	if (CHXCUR.sbpos > 0) CHXCUR.sbpos--;
-	else {
-		CHXCUR.sbpos = CHXGC.bytes_in_group * 2 - 1;
-		if (CHXCUR.x > 0) CHXCUR.x--;
-		else if (CHXCUR.y > 0) CHXCUR.x = CHXGC.bytes_per_row / CHXGC.bytes_in_group - 1, CHXCUR.y--;
-		else CHXCUR.sbpos = 0;
+	if (CINST.cursor.pos || CINST.cursor.sbpos) {
+		CINST.cursor.pos -= !CINST.cursor.sbpos;
+		CINST.cursor.sbpos = !CINST.cursor.sbpos;
+		CINST.scroll_pos -= (CINST.cursor.pos - CINST.scroll_pos < 0) * CINST.bytes_per_row;
+		chx_draw_contents();
 	}
-	chx_update_cursor();
 }
 
 void chx_update_cursor() {
-	cur_set(CHXGC.num_digits + 2 + CHXCUR.x * (2 + CHXGC.bytes_in_group * 2) + CHXCUR.sbpos, CHXCUR.y - CHXGC.section_start + TPD);
+	cur_set(CHX_CURSOR_X, CHX_GET_CURSOR_Y);
 	fflush(stdout);
 }
 
 void chx_type_hexchar(char _c) {
 	if (!IS_CHAR_HEX(_c)) return; // only accept hex characters
 	if ((_c ^ 0x60) < 7) _c -= 32; // ensure everything is upper-case
-	printf("\033[1;35m%c\033[0m\033[1D", _c); // print the character on the screen
+	printf("%c", _c); // print the character on the screen
 	
 	char nullkey[2] = {_c, 0};
 	
+	if (CINST.cursor.pos >= CINST.fdata.len) {
+		CINST.fdata.len = CINST.cursor.pos + 1;
+		CINST.fdata.data = realloc(CINST.fdata.data, CINST.fdata.len);
+		CINST.style_data = realloc(CINST.style_data, CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0));
+	}
+	
 	// update stored file data
-	CHXGC.instances[CHXGC.sel_instance].data[CHXCUR.y * CHXGC.bytes_per_row + (CHXCUR.x * CHXGC.bytes_in_group) + CHXCUR.sbpos / 2] &= 0x0F << ((CHXCUR.sbpos % 2) * 4);
-	CHXGC.instances[CHXGC.sel_instance].data[CHXCUR.y * CHXGC.bytes_per_row + (CHXCUR.x * CHXGC.bytes_in_group) + CHXCUR.sbpos / 2] |= strtol(nullkey, NULL, 16) << (((CHXCUR.sbpos + 1) % 2) * 4);
-	cur_set(0, 0);
+	CINST.fdata.data[CINST.cursor.pos] &= 0x0F << (CINST.cursor.sbpos * 4);
+	CINST.fdata.data[CINST.cursor.pos] |= strtol(nullkey, NULL, 16) << (!CINST.cursor.sbpos * 4);
+	
+	// highlight unsaved changes
+	CINST.saved = 0;
+	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
 	
 	// move cursor after typing a char
-	// if the cursor is in a sub position, add to the sub position of the cursor, else change the selected byte
 	chx_cursor_move_right();
 }
 
+void chx_delete_hexchar() {
+	if (CINST.cursor.pos + 1 == CINST.fdata.len && !CINST.cursor.sbpos)
+		if (!(CINST.fdata.data[CINST.cursor.pos] & 0x0F)) {
+			CINST.fdata.len = CINST.cursor.pos;
+			CINST.fdata.data = realloc(CINST.fdata.data, CINST.fdata.len);
+			CINST.style_data = realloc(CINST.style_data, CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0));
+		} else
+			CINST.fdata.data[CINST.cursor.pos] &= 0x0F;
+	else if (CINST.cursor.pos < CINST.fdata.len)
+		if (CINST.cursor.sbpos)
+			CINST.fdata.data[CINST.cursor.pos] &= 0xF0;
+		else
+			CINST.fdata.data[CINST.cursor.pos] &= 0x0F;
+}
+
+void chx_backspace_hexchar() {
+	chx_delete_hexchar();
+	chx_cursor_move_left();
+}
+
 void chx_mode_set_insert() {
-	CHXGC.mode = CHX_MODE_TYPE_HEXCHAR;
+	CINST.mode = CHX_MODE_TYPE_HEXCHAR;
+}
+
+void chx_mode_set_default() {
+	CINST.mode = CHX_MODE_DEFAULT;
 }
 
 void chx_save() {
-	chx_export(CHXGC.instances[CHXGC.sel_instance].filename);
+	chx_export(CINST.fdata.filename);
+	CINST.saved = 1;
+	for (int i = 0; i < CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0); i++)
+		CINST.style_data[i] = 0;
 	
 	// redraw content to remove unsaved highlights
 	chx_draw_contents();
@@ -73,7 +104,7 @@ void chx_save_as() {
 	char usrin[256];
 	
 	// print save dialoge and recieve user input
-	cur_set(0, CHXGC.theight);
+	cur_set(0, CINST.height);
 	printf("SAVE AS? (LEAVE EMPTY TO CANCEL): ");
 	fflush(stdout);
 	
@@ -83,7 +114,12 @@ void chx_save_as() {
 	usrin[strcspn(usrin, "\n")] = 0;
 	
 	// only export if filename was entered
-	if (usrin[0]) chx_export(usrin);
+	if (usrin[0]) {
+		chx_export(usrin);
+		CINST.saved = 1;
+		for (int i = 0; i < CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0); i++)
+			CINST.style_data[i] = 0;
+	}
 	
 	// erase save dialoge
 	printf("\033[1A\033[2K");
@@ -95,13 +131,13 @@ void chx_save_as() {
 
 void chx_quit() {
 	// ask user if they would like to save
-	cur_set(0, CHXGC.theight);
+	cur_set(0, CINST.height);
 	printf("WOULD YOU LIKE TO SAVE? (Y / N): ");
 	
 	switch (fgetc(stdin)) {
 		case 'y':
 		case 'Y':
-			chx_export(CHXGC.instances[CHXGC.sel_instance].filename);
+			chx_export(CINST.fdata.filename);
 			break;
 		default:
 			cls();
