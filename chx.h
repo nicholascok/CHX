@@ -15,7 +15,7 @@
 
 #define tenter() system("tput smcup")
 #define texit() system("tput rmcup")
-#define cls() system("clear")
+#define cls() printf("\e[2J");
 #define cur_set(X, Y) printf("\033[%d;%dH", Y + 1, X + 1)
 
 #define TPD 1
@@ -30,7 +30,7 @@
 #define BETWEEN(X, A, B) (X >= min(A, B) && X <= max(A, B))
 #define CHX_CURSOR_X (int) (CINST.row_num_len + 4 * (CINST.cursor.pos % CINST.bytes_per_row) + CINST.cursor.sbpos + 2)
 #define CHX_GET_CURSOR_Y (int) (CINST.cursor.pos / CINST.bytes_per_row - CINST.scroll_pos + TPD)
-#define WORD(X) *((uint16_t*) &X)
+#define WORD(X) *((uint16_t*) & X)
 
 struct CHX_CURSOR {
 	long pos;
@@ -49,6 +49,8 @@ struct chx_finfo {
 
 struct CHX_INSTANCE {
 	unsigned char* style_data;
+	int copy_buffer_len;
+	char* copy_buffer;
 	struct chx_finfo fdata;
 	struct CHX_CURSOR cursor;
 	char bytes_per_row;
@@ -61,7 +63,7 @@ struct CHX_INSTANCE {
 	int scroll_pos;
 	int num_bytes;
 	int num_rows;
-	int selecting;
+	int selected;
 	int sel_start;
 	int sel_end;
 	char mode;
@@ -77,7 +79,7 @@ struct chx_finfo chx_import(char* fpath);
 void chx_export(char* fpath);
 
 struct chx_key chx_get_key();
-struct chx_key chx_get_char();
+char chx_get_char();
 void chx_draw_contents();
 void chx_main();
 

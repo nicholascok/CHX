@@ -8,7 +8,7 @@
 #define KEY_S_RIGHT 0x0343
 #define KEY_S_LEFT 	0x0344
 
-#define KEY_ESCAPE 	0x0100
+#define KEY_ESCAPE 	0x0200
 #define KEY_MAX_VAL 0x03FF
 
 #define CHX_CTRL(C) (C & 0x1F)
@@ -33,6 +33,8 @@ void (*chx_keybinds_global[])(void) = {
 
 void (*chx_keybinds_mode_command[])(void) = {
 	[KEY_MAX_VAL] = fvoid, // do not remove
+	['c'] = chx_copy,
+	['v'] = chx_paste,
 	['i'] = chx_mode_set_insert,
 	['q'] = chx_quit,
 	['s'] = chx_save,

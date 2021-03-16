@@ -33,43 +33,38 @@ void chx_cursor_move_left() {
 
 void chx_start_selection() {
 	CINST.sel_start = CINST.cursor.pos;
-	CINST.selecting = 1;
-}
-
-void chx_finish_selection() {
-	CINST.selecting = 0;
-	chx_draw_contents();
+	CINST.sel_end = CINST.cursor.pos;
+	CINST.selected = 1;
 }
 
 void chx_clear_selection() {
-	CINST.sel_start = 0;
-	CINST.sel_end = 0;
+	CINST.selected = 0;
 	chx_draw_contents();
 }
 
 void chx_cursor_select_up() {
-	if (!CINST.selecting) chx_start_selection();
+	if (!CINST.selected) chx_start_selection();
 	chx_cursor_move_up();
 	CINST.sel_end = CINST.cursor.pos;
 	chx_draw_contents();
 }
 
 void chx_cursor_select_down() {
-	if (!CINST.selecting) chx_start_selection();
+	if (!CINST.selected) chx_start_selection();
 	chx_cursor_move_down();
 	CINST.sel_end = CINST.cursor.pos;
 	chx_draw_contents();
 }
 
 void chx_cursor_select_right() {
-	if (!CINST.selecting) chx_start_selection();
+	if (!CINST.selected) chx_start_selection();
 	chx_cursor_move_right();
 	CINST.sel_end = CINST.cursor.pos;
 	chx_draw_contents();
 }
 
 void chx_cursor_select_left() {
-	if (!CINST.selecting) chx_start_selection();
+	if (!CINST.selected) chx_start_selection();
 	chx_cursor_move_left();
 	CINST.sel_end = CINST.cursor.pos;
 	chx_draw_contents();
@@ -80,6 +75,13 @@ void chx_update_cursor() {
 	fflush(stdout);
 }
 
+char* recalloc(char* _p, long _o, long _n) {
+	char* ptr = calloc(1, _n);
+	for (int i = 0; i < _o; i++) ptr[i] = _p[i];
+	free(_p);
+	return ptr;
+}
+
 void chx_type_hexchar(char _c) {
 	if (!IS_CHAR_HEX(_c)) return; // only accept hex characters
 	if ((_c ^ 0x60) < 7) _c -= 32; // ensure everything is upper-case
@@ -88,9 +90,9 @@ void chx_type_hexchar(char _c) {
 	char nullkey[2] = {_c, 0};
 	
 	if (CINST.cursor.pos >= CINST.fdata.len) {
+		CINST.fdata.data = recalloc(CINST.fdata.data, CINST.fdata.len, CINST.cursor.pos + 1);
+		CINST.style_data = recalloc(CINST.style_data, CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0), (CINST.cursor.pos + 1) / 8 + ((CINST.cursor.pos + 1) % 8 != 0));
 		CINST.fdata.len = CINST.cursor.pos + 1;
-		CINST.fdata.data = realloc(CINST.fdata.data, CINST.fdata.len);
-		CINST.style_data = realloc(CINST.style_data, CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0));
 	}
 	
 	// update stored file data
@@ -173,23 +175,58 @@ void chx_save_as() {
 	chx_draw_contents();
 }
 
+char chx_abs(long _n) {
+	return _n + 2 * _n * -(_n < 0);
+}
+
+long min(long _a, long _b) {
+	if (_a < _b) return _a;
+	return _b;
+}
+
+long max(long _a, long _b) {
+	if (_a > _b) return _a;
+	return _b;
+}
+
+void chx_copy() {
+	long sel_begin = min(CINST.sel_start, CINST.sel_end);
+	CINST.copy_buffer_len = chx_abs(CINST.sel_start - CINST.sel_end);
+	CINST.copy_buffer = malloc(CINST.copy_buffer_len);
+	for (int i = 0; i < CINST.copy_buffer_len; i++) CINST.copy_buffer[i] = CINST.fdata.data[sel_begin + i];
+}
+
+void chx_paste() {
+	if (CINST.copy_buffer) {
+		CINST.saved = 0;
+		for (int i = 0; i < CINST.copy_buffer_len; i++) {
+			CINST.fdata.data[CINST.cursor.pos + i] = CINST.copy_buffer[i];
+			CINST.style_data[(CINST.cursor.pos + i) / 8] |= 0x80 >> ((CINST.cursor.pos + i) % 8);
+		}
+		chx_draw_contents();
+	}
+}
+
 void chx_quit() {
 	// ask user if they would like to save
-	cur_set(0, CINST.height);
-	printf("WOULD YOU LIKE TO SAVE? (Y / N): ");
-	
-	switch (fgetc(stdin)) {
-		case 'y':
-		case 'Y':
-			chx_export(CINST.fdata.filename);
-			break;
-		default:
-			cls();
-			chx_main();
-			break;
-		case 'n':
-		case 'N':
-			break;
+	if (!CINST.saved) {
+		cur_set(0, CINST.height);
+		printf("WOULD YOU LIKE TO SAVE? (Y / N): ");
+		fflush(stdout);
+		
+		switch (chx_get_char()) {
+			case 'y':
+			case 'Y':
+				chx_export(CINST.fdata.filename);
+				break;
+			default:
+				cls();
+				chx_main();
+				break;
+			case 'n':
+			case 'N':
+				break;
+		}
 	}
 	
 	// restore terminal state
