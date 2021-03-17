@@ -56,6 +56,8 @@ void chx_start_selection() {
 }
 
 void chx_clear_selection() {
+	CINST.sel_start = 0;
+	CINST.sel_stop = 0;
 	CINST.selected = 0;
 	chx_draw_contents();
 }
@@ -178,6 +180,12 @@ void chx_save() {
 	
 	// redraw content to remove unsaved highlights
 	chx_draw_contents();
+}
+
+char cmp_str(char* _a, char* _b) {
+	for (int i = 0; _a[i] || _b[i]; i++)
+		if (_a[i] != _b[i]) return 0;
+	return 1;
 }
 
 void chx_save_as() {

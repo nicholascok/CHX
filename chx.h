@@ -32,6 +32,11 @@
 #define CHX_CURSOR_Y (int) ((CINST.cursor.pos - CINST.scroll_pos) / CINST.bytes_per_row + TPD)
 #define WORD(X) *((uint16_t*) &X)
 
+struct chx_command {
+	void (*execute)(void);
+	char* str;
+};
+
 struct CHX_CURSOR {
 	long pos;
 	char sbpos;
@@ -79,11 +84,15 @@ void fvoid() {};
 struct chx_finfo chx_import(char* fpath);
 void chx_export(char* fpath);
 
+void chx_prompt_command();
+
 struct chx_key chx_get_key();
 char chx_get_char();
+
 void chx_print_status();
 void chx_draw_contents();
 void chx_redraw_line();
+
 void chx_main();
 
 #endif

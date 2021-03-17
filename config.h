@@ -30,7 +30,8 @@ void (*chx_keybinds_global[])(void) = {
 	[CHX_CTRL('i')] = chx_type_mode_toggle,
 	[CHX_CTRL('w')] = chx_save,
 	[CHX_CTRL('x')] = chx_quit,
-	[CHX_CTRL('e')] = chx_save_as
+	[CHX_CTRL('e')] = chx_save_as,
+	[':'] = chx_prompt_command
 };
 
 void (*chx_keybinds_mode_command[])(void) = {
@@ -42,4 +43,9 @@ void (*chx_keybinds_mode_command[])(void) = {
 	['q'] = chx_quit,
 	['s'] = chx_save,
 	['e'] = chx_save_as
+};
+
+struct chx_command chx_commands[] = {
+	(struct chx_command) {chx_quit, "quit"},
+	(struct chx_command) {0, 0} // do not remove
 };

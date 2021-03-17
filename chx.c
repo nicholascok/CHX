@@ -96,6 +96,30 @@ void chx_draw_contents() {
 	fflush(stdout);
 }
 
+void chx_prompt_command() {
+	// setup user input buffer
+	char usrin[256];
+	
+	// command interpreter recieve user input
+	cur_set(0, CINST.height);
+	printf("\e[2K: ");
+	fflush(stdout);
+	
+	fgets(usrin, 256, stdin);
+	
+	// cut input at first newline
+	usrin[strcspn(usrin, "\n")] = 0;
+	
+	// lookup entered command and execute procedure
+	for (int i = 0; chx_commands[i].str; i++)
+		if (cmp_str(chx_commands[i].str, usrin))
+			chx_commands[i].execute();
+	
+	// redraw contents
+	chx_print_status();
+	chx_draw_contents();
+}
+
 void chx_main() {
 	// draw content
 	chx_draw_contents();
