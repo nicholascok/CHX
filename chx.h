@@ -19,8 +19,8 @@
 #define cur_set(X, Y) printf("\033[%d;%dH", Y + 1, X + 1)
 
 #define TPD 1
-#define BPD 0
-#define PD TPD + BPD
+#define BPD 1
+#define PD (TPD + BPD)
 
 #define IS_LETTER(C) ((C ^ 0x40) < 26 || (C ^ 0x60) < 26)
 #define IS_CHAR_HEX(C) ((C ^ 0x40) < 7 || (C ^ 0x60) < 7 || (C ^ 0x30) < 10)
@@ -28,7 +28,7 @@
 
 #define CINST CHX_INSTANCES[CHX_SEL_INSTANCE]
 #define BETWEEN(X, A, B) (X >= min(A, B) && X <= max(A, B))
-#define CHX_CURSOR_X (int) (CINST.row_num_len + 4 * (CINST.cursor.pos % CINST.bytes_per_row) + CINST.cursor.sbpos + 2)
+#define CHX_CURSOR_X (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((CINST.cursor.pos % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (CINST.cursor.pos % CINST.bytes_in_group) + CINST.cursor.sbpos + CINST.group_spacing)
 #define CHX_CURSOR_Y (int) ((CINST.cursor.pos - CINST.scroll_pos) / CINST.bytes_per_row + TPD)
 #define WORD(X) *((uint16_t*) & X)
 
@@ -55,6 +55,7 @@ struct CHX_INSTANCE {
 	struct CHX_CURSOR cursor;
 	char bytes_per_row;
 	char bytes_in_group;
+	char group_spacing;
 	char row_num_len;
 	int height;
 	int width;
@@ -62,10 +63,11 @@ struct CHX_INSTANCE {
 	int y_offset;
 	int scroll_pos;
 	int num_bytes;
+	int max_bytes_per_row;
 	int num_rows;
 	int selected;
 	int sel_start;
-	int sel_end;
+	int sel_stop;
 	char mode;
 	char saved;
 };
@@ -80,7 +82,9 @@ void chx_export(char* fpath);
 
 struct chx_key chx_get_key();
 char chx_get_char();
+void chx_print_status();
 void chx_draw_contents();
+void chx_redraw_line();
 void chx_main();
 
 #endif
