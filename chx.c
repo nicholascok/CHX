@@ -23,6 +23,7 @@ void chx_export(char* fpath) {
 
 void chx_redraw_line(int byte) {
 	int line_start = (byte / CINST.bytes_per_row) * CINST.bytes_per_row;
+	printf("| %i |\n", line_start);
 	printf("\e[1;34m\033[%d;0H%0*X \e[0m", (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD + 1, CINST.row_num_len, line_start);
 	cur_set(CINST.row_num_len + CINST.group_spacing, (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
 	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {

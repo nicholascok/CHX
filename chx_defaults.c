@@ -56,8 +56,6 @@ void chx_start_selection() {
 }
 
 void chx_clear_selection() {
-	CINST.sel_start = 0;
-	CINST.sel_stop = 0;
 	CINST.selected = 0;
 	chx_draw_contents();
 }
@@ -120,7 +118,7 @@ void chx_resize_file(long _n) {
 void chx_type_hexchar(char _c) {
 	if (!IS_CHAR_HEX(_c)) return; // only accept hex characters
 	if ((_c ^ 0x60) < 7) _c -= 32; // ensure everything is upper-case
-	printf("\e[7m%c\e[0m", _c); // print the character on the screen
+	printf("\e[1;33m%c\e[0m", _c); // print the character on the screen
 	
 	char nullkey[2] = {_c, 0};
 	
