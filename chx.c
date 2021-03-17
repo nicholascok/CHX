@@ -23,8 +23,8 @@ void chx_export(char* fpath) {
 
 void chx_redraw_line(int byte) {
 	int line_start = (byte / CINST.bytes_per_row) * CINST.bytes_per_row;
-	printf("\e[1;34m\033[%d;0H%0*X \e[0m", (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD + 1, CINST.row_num_len, line_start);
-	cur_set(CINST.row_num_len + CINST.group_spacing, (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
+	printf("\e[1;34m\033[%d;0H%0*X \e[0m", (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD + 1, CINST.row_num_len, line_start);
+	cur_set(CINST.row_num_len + CINST.group_spacing, (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
 	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
 		if (i % CINST.bytes_per_row && !(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
@@ -69,14 +69,14 @@ void chx_draw_contents() {
 	
 	// print row numbers
 	for (int i = 0; i < CINST.num_rows; i++)
-		printf("\033[%d;0H%0*X", i + TPD + 1, CINST.row_num_len, i * CINST.bytes_per_row + CINST.scroll_pos);
+		printf("\033[%d;0H%0*lX", i + TPD + 1, CINST.row_num_len, i * CINST.bytes_per_row + CINST.scroll_pos);
 	
 	printf("\e[0m");
 	
 	// print main contents
 	for (int i = CINST.scroll_pos; i < CINST.scroll_pos + CINST.num_bytes; i++) {
 		if (!(i % CINST.bytes_per_row))
-			cur_set(CINST.row_num_len + CINST.group_spacing, (i - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
+			cur_set(CINST.row_num_len + CINST.group_spacing, (int) (i - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
 		else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
 		if (i < CINST.fdata.len) {
@@ -198,9 +198,9 @@ int main(int argc, char** argv) {
 	CINST.width = size.ws_col;
 	CINST.x_offset = 0;
 	CINST.y_offset = 0;
-	CINST.bytes_per_row = 32;
-	CINST.bytes_in_group = 8;
-	CINST.group_spacing = 2;
+	CINST.bytes_per_row = 16;
+	CINST.bytes_in_group = 1;
+	CINST.group_spacing = 1;
 	CINST.row_num_len = 8;
 	CINST.num_rows = size.ws_row - PD;
 	CINST.num_bytes = CINST.num_rows * CINST.bytes_per_row;

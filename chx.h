@@ -30,7 +30,7 @@
 #define BETWEEN(X, A, B) (X >= min(A, B) && X <= max(A, B))
 #define CHX_CURSOR_X (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((CINST.cursor.pos % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (CINST.cursor.pos % CINST.bytes_in_group) + CINST.cursor.sbpos + CINST.group_spacing)
 #define CHX_CURSOR_Y (int) ((CINST.cursor.pos - CINST.scroll_pos) / CINST.bytes_per_row + TPD)
-#define WORD(X) *((uint16_t*) & X)
+#define WORD(X) *((uint16_t*) &X)
 
 struct CHX_CURSOR {
 	long pos;
@@ -61,15 +61,14 @@ struct CHX_INSTANCE {
 	int width;
 	int x_offset;
 	int y_offset;
-	int scroll_pos;
 	int num_bytes;
-	int max_bytes_per_row;
 	int num_rows;
-	int selected;
-	int sel_start;
-	int sel_stop;
-	char mode;
+	long scroll_pos;
+	long sel_start;
+	long sel_stop;
+	char selected;
 	char saved;
+	char mode;
 };
 
 struct CHX_INSTANCE CHX_INSTANCES[8];
