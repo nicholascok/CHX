@@ -51,7 +51,7 @@ void chx_draw_contents() {
 	}
 	
 	// restore cursor position
-	cur_set(CHX_CURSOR_X, CHX_GET_CURSOR_Y);
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	
 	fflush(stdout);
 }

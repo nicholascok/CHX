@@ -71,7 +71,7 @@ void chx_cursor_select_left() {
 }
 
 void chx_update_cursor() {
-	cur_set(CHX_CURSOR_X, CHX_GET_CURSOR_Y);
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
