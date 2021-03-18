@@ -15,7 +15,8 @@ void chx_replace_mode_toggle() {
 }
 
 void chx_cursor_move_vertical_by(int _n) {
-	CINST.cursor.pos += _n * CINST.bytes_per_row;
+	int new_pos = CINST.cursor.pos + _n * CINST.bytes_per_row;
+	CINST.cursor.pos = (new_pos >= CINST.bytes_per_row) ? new_pos : CINST.cursor.pos % CINST.bytes_per_row;
 	chx_update_cursor();
 }
 
@@ -260,6 +261,7 @@ void chx_backspace_hexchar() {
 	if (CINST.cursor.pos == CINST.fdata.len && !CINST.cursor.sbpos) {
 		chx_resize_file(CINST.fdata.len - 1);
 		CINST.cursor.pos--;
+		CINST.cursor.sbpos = 1;
 	} else
 		chx_delete_hexchar();
 	
