@@ -249,6 +249,8 @@ void chx_delete_hexchar() {
 	
 	// update screen
 	chx_redraw_line(CINST.cursor.pos);
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
 }
 
 void chx_backspace_hexchar() {
@@ -264,6 +266,8 @@ void chx_backspace_hexchar() {
 	// move cursor after removing char
 	chx_cursor_move_left();
 	chx_redraw_line(CINST.cursor.pos);
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
 }
 
 void chx_mode_set_insert() {
