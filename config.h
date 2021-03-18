@@ -62,7 +62,9 @@ void (*chx_keybinds_global[])(void) = {
 	[CHX_CTRL('x')] = chx_exit,
 	[CHX_CTRL('q')] = chx_exit,
 	[CHX_CTRL('z')] = chx_quit,
-	[':'] = chx_prompt_command
+	['^'] = chx_to_line_start,
+	['$'] = chx_to_line_end,
+	[':'] = chx_prompt_command,
 };
 
 // COMMAND MODE KEYBINDS
@@ -100,7 +102,6 @@ struct chx_command chx_commands[] = {
 	(struct chx_command) {chx_quit, "q"},
 	(struct chx_command) {chx_save_and_quit, "wq"},
 	(struct chx_command) {chx_save_and_quit, "x"},
-	(struct chx_command) {chx_to_line_start, "0"},
 	(struct chx_command) {0, 0} // do not remove
 };
 

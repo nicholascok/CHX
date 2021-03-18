@@ -149,6 +149,33 @@ char* recalloc(char* _p, long _o, long _n) {
 	return ptr;
 }
 
+char str_is_num(char* _s) {
+	for (int i = 0; _s[i]; i++) if (!IS_DIGIT(_s[i])) return 0;
+	return 1;
+}
+
+char str_is_hex(char* _s) {
+	for (int i = 0; _s[i]; i++) if (!IS_CHAR_HEX(_s[i])) return 0;
+	return 1;
+}
+
+int str_to_num(char* _s) {
+	int total = 0;
+	for (int i = 0; _s[i]; i++)
+		total = total * 10 + _s[i] - 0x30;
+	return total;
+}
+
+int str_to_hex(char* _s) {
+	int total = 0;
+	for (int i = 0; _s[i]; i++) {
+		total *= 16;
+		if ((_s[i] ^ 0x60) < 7) _s[i] -= 32;
+		total += (_s[i] > 0x40) ? _s[i] - 0x37 : _s[i] - 0x30;
+	}
+	return total;
+}
+
 void chx_resize_file(long _n) {
 	CINST.fdata.data = recalloc(CINST.fdata.data, CINST.fdata.len, _n);
 	CINST.style_data = recalloc(CINST.style_data, CINST.fdata.len / 8 + 1, (_n) / 8 + 1);
@@ -157,6 +184,12 @@ void chx_resize_file(long _n) {
 
 void chx_to_line_start() {
 	CINST.cursor.pos -= CINST.cursor.pos % CINST.bytes_per_row;
+	CINST.cursor.sbpos = 0;
+	chx_update_cursor();
+}
+
+void chx_to_line_end() {
+	CINST.cursor.pos -= CINST.cursor.pos % CINST.bytes_per_row - CINST.bytes_per_row + 1;
 	CINST.cursor.sbpos = 0;
 	chx_update_cursor();
 }
