@@ -12,7 +12,7 @@ void chx_replace_mode_toggle() {
 
 void chx_update_cursor() {
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
+	chx_draw_sidebar();
 }
 
 void chx_cursor_move_up() {

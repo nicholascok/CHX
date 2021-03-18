@@ -48,6 +48,22 @@ void chx_redraw_line(int byte) {
 			printf("..");
 	}
 	
+	// draw ascii preview
+	cur_set(CHX_CONTENT_END, (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
+	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
+		if (i == CINST.cursor.pos)
+			printf("\e[7m");
+		else if (i == CINST.cursor.pos + 1)
+			printf("\e[0m");
+		if (i < CINST.fdata.len) {
+			if (IS_PRINTABLE(CINST.fdata.data[i]))
+				printf("%c", CINST.fdata.data[i]);
+			else
+				printf("·");
+		} else
+			printf("•");
+	}
+	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
@@ -119,6 +135,10 @@ void chx_draw_contents() {
 
 void chx_draw_sidebar() {
 	for (int i = CINST.scroll_pos; i < CINST.scroll_pos + CINST.num_bytes; i++) {
+		if (i == CINST.cursor.pos)
+			printf("\e[7m");
+		else if (i == CINST.cursor.pos + 1)
+			printf("\e[0m");
 		if (!(i % CINST.bytes_per_row))
 			cur_set(CHX_CONTENT_END, (int) (i - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
 		if (i < CINST.fdata.len) {
@@ -129,6 +149,7 @@ void chx_draw_sidebar() {
 		} else
 			printf("•");
 	}
+	printf("\e[0m");
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
