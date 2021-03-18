@@ -158,6 +158,8 @@ struct chx_key chx_get_key();
 char chx_get_char();
 
 void chx_print_status();
+void chx_update_cursor();
+void chx_swap_endianness();
 void chx_draw_contents();
 void chx_draw_sidebar();
 void chx_draw_extra();

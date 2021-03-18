@@ -14,41 +14,6 @@ void chx_replace_mode_toggle() {
 	fflush(stdout);
 }
 
-void chx_update_cursor() {
-	// stop cursor at 0;
-	CINST.cursor.pos *= (CINST.cursor.pos >= 0);
-	
-	// scroll if pasting outside of visible screen
-	if (CINST.cursor.pos > (CINST.scroll_pos - 1) * CINST.bytes_per_row + CINST.num_bytes) {
-		CINST.scroll_pos = (CINST.cursor.pos - CINST.num_bytes) / CINST.bytes_per_row + 1;
-		chx_draw_contents();
-	} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
-		CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
-		chx_draw_contents();
-	}
-	
-	// redraw cursor
-	#ifdef CHX_SHOW_INSPECTOR
-		chx_draw_extra();
-	#endif
-	
-	#ifdef CHX_SHOW_PREVIEW
-		chx_draw_sidebar();
-	#endif
-	
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
-}
-
-void chx_swap_endianness() {
-	CINST.endianness = ! CINST.endianness;
-	#ifdef CHX_SHOW_INSPECTOR
-		chx_draw_extra();
-		cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-		fflush(stdout);
-	#endif
-}
-
 void chx_cursor_move_vertical_by(int _n) {
 	CINST.cursor.pos += _n * CINST.bytes_per_row;
 	chx_update_cursor();
@@ -73,6 +38,18 @@ void chx_cursor_move_right_by_5() {
 
 void chx_cursor_move_left_by_5() {
 	chx_cursor_move_horizontal_by(-5);
+}
+
+void chx_cursor_prev_byte() {
+	CINST.cursor.pos--;
+	CINST.cursor.sbpos = 0;
+	chx_update_cursor();
+}
+
+void chx_cursor_next_byte() {
+	CINST.cursor.pos++;
+	CINST.cursor.sbpos = 0;
+	chx_update_cursor();
 }
 
 void chx_cursor_move_up() {
