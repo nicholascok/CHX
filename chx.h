@@ -27,7 +27,7 @@
 #define CHX_LITTLE_ENDIAN 1
 #define CHX_BIG_ENDIAN 0
 
-#define IS_PRINTABLE(C) (C > 0x20 && C < 0x7F)
+#define IS_PRINTABLE(C) (C > 0x1F && C < 0x7F)
 #define IS_LETTER(C) ((C ^ 0x40) < 26 || (C ^ 0x60) < 26)
 #define IS_CHAR_HEX(C) ((C ^ 0x40) < 7 || (C ^ 0x60) < 7 || (C ^ 0x30) < 10)
 #define IS_DIGIT(C) ((C ^ 0x30) < 10)
