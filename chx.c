@@ -64,10 +64,6 @@ void chx_redraw_line(int byte) {
 			printf("•");
 	}
 	printf("\e[0m");
-	
-	// restore cursor position
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
 }
 
 void chx_print_status() {
@@ -87,47 +83,58 @@ void chx_print_status() {
 			printf("\e[2K[ UNKNOWN ]");
 			break;
 	}
-	
-	// restore cursor position
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
 }
 
 void chx_draw_extra() {
-	if (CINST.cursor.pos < CINST.fdata.len) {
-		cur_set(CHX_SIDEBAR_END, 0);
-		printf("\e[1m");
-		printf("\e[0KData Inspector:");
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kbinary: "BINARY_PATTERN, BYTE_TO_BINARY(CINST.fdata.data[CINST.cursor.pos]));
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kint8: %i", INT8_AT(CINST.fdata.data, CINST.cursor.pos));
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kint16: %i", (CINST.endianness) ? INT16_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_16 (INT16_AT(CINST.fdata.data, CINST.cursor.pos)));
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kint32: %i", (CINST.endianness) ? INT32_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_32 (INT32_AT(CINST.fdata.data, CINST.cursor.pos)));
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kint64: %li", (CINST.endianness) ? INT64_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_64 (INT64_AT(CINST.fdata.data, CINST.cursor.pos)));
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kuint8: %u", UINT8_AT(CINST.fdata.data, CINST.cursor.pos));
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kuint16: %u", (CINST.endianness) ? UINT16_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_16 (UINT16_AT(CINST.fdata.data, CINST.cursor.pos)));
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kuint32: %u", (CINST.endianness) ? UINT32_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_32 (UINT32_AT(CINST.fdata.data, CINST.cursor.pos)));
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kuint64: %lu", (CINST.endianness) ? UINT64_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_64 (UINT64_AT(CINST.fdata.data, CINST.cursor.pos)));
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		if (IS_PRINTABLE(CINST.fdata.data[CINST.cursor.pos]))
-			printf("\e[0KANSI char: %c", CINST.fdata.data[CINST.cursor.pos]);
+	// copy bytes from file
+	char buf[16];
+	for (int i = 0; i < 16; i++)
+		if (CINST.cursor.pos + i < CINST.fdata.len)
+			buf[i] = CINST.fdata.data[CINST.cursor.pos + i];
 		else
-			printf("\e[0KANSI char: \ufffd");
-		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kwide char: %lc", (CINST.endianness) ? WCHAR_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_16 (WCHAR_AT(CINST.fdata.data, CINST.cursor.pos)));
-		printf("\e[%dG\e[1B\e[0K\e[1B ", CHX_SIDEBAR_END);
-		if (CINST.endianness) printf("\e[0K[LITTLE ENDIAN]");
-		else printf("\e[0K[BIG ENDIAN]");
-		printf("\e[%dG\e[1B\e[0K\e[0m", CHX_SIDEBAR_END);
-	}
+			buf[i] = 0;
+	
+	// print inspected data
+	cur_set(CHX_SIDEBAR_END, 0);
+	printf("\e[1m");
+	printf("\e[0KData Inspector:");
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kbinary: "BINARY_PATTERN, BYTE_TO_BINARY(buf[0]));
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kint8: %i", INT8_AT(&buf));
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kint16: %i", (CINST.endianness) ? INT16_AT(&buf) : __bswap_16 (INT16_AT(&buf)));
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kint32: %i", (CINST.endianness) ? INT32_AT(&buf) : __bswap_32 (INT32_AT(&buf)));
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kint64: %li", (CINST.endianness) ? INT64_AT(&buf) : __bswap_64 (INT64_AT(&buf)));
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kuint8: %u", UINT8_AT(&buf));
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kuint16: %u", (CINST.endianness) ? UINT16_AT(&buf) : __bswap_16 (UINT16_AT(&buf)));
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kuint32: %u", (CINST.endianness) ? UINT32_AT(&buf) : __bswap_32 (UINT32_AT(&buf)));
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kuint64: %lu", (CINST.endianness) ? UINT64_AT(&buf) : __bswap_64 (UINT64_AT(&buf)));
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	if (IS_PRINTABLE(buf[0]))
+		printf("\e[0KANSI char: %c", buf[0]);
+	else
+		printf("\e[0KANSI char: \ufffd");
+	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[0Kwide char: %lc", (CINST.endianness) ? WCHAR_AT(&buf) : __bswap_16 (WCHAR_AT(&buf)));
+	printf("\e[%dG\e[1B\e[0K\e[1B ", CHX_SIDEBAR_END);
+	if (CINST.endianness) printf("\e[0K[LITTLE ENDIAN]");
+	else printf("\e[0K[BIG ENDIAN]");
+	printf("\e[%dG\e[1B\e[0K\e[0m", CHX_SIDEBAR_END);
+}
+
+void chx_draw_all() {
+	// draw elements
+	chx_draw_contents();
+	chx_draw_sidebar();
+	chx_print_status();
+	chx_draw_extra();
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
@@ -166,10 +173,6 @@ void chx_draw_contents() {
 		} else
 			printf("..");
 	}
-	
-	chx_draw_sidebar();
-	chx_print_status();
-	chx_draw_extra();
 }
 
 void chx_draw_sidebar() {
@@ -218,35 +221,35 @@ void chx_prompt_command() {
 			CINST.last_action = chx_commands[i].execute;
 		}
 	
-	// redraw contents
-	chx_print_status();
-	chx_draw_contents();
+	// redraw elements
+	chx_draw_all();
 }
 
 void chx_main() {
-	// draw content
-	chx_draw_contents();
-	chx_print_status();
-	
-	// main loop
 	for(struct chx_key key;; key = chx_get_key()) {
-		// control keys are global
+		// execute key sequence, if available
 		if (chx_keybinds_global[WORD(key)]) {
 			chx_keybinds_global[WORD(key)]();
+			
+			// make sure function is not in exclusion list, if so then set the last action to the function pointer
 			char is_valid = 1;
 			for (int i = 0; i < sizeof(func_exceptions) / sizeof(void*); i++)
 				if (chx_keybinds_global[WORD(key)] == func_exceptions[i])
 					is_valid = 0;
 			if (is_valid) CINST.last_action = chx_keybinds_global[WORD(key)];
 		}
+		
+		// clear selection if cursor is not at the end of the selection (meaning the user is no longer selecting and the cursor has moved)
 		if (CINST.selected && CINST.cursor.pos != CINST.sel_stop) chx_clear_selection();
 		
-		// keys have different actions depending on active mode setting
 		switch (CINST.mode) {
 			default:
 			case CHX_MODE_DEFAULT:
+				// execute key sequence, if available
 				if (chx_keybinds_mode_command[WORD(key)]) {
 					chx_keybinds_mode_command[WORD(key)]();
+			
+					// make sure function is not in exclusion list, if so then set the last action to the function pointer
 					char is_valid = 1;
 					for (int i = 0; i < sizeof(func_exceptions) / sizeof(void*); i++)
 						if (chx_keybinds_mode_command[WORD(key)] == func_exceptions[i])
@@ -374,6 +377,9 @@ int main(int argc, char** argv) {
 	
 	// initialize cursor
 	CINST.cursor = (struct CHX_CURSOR) {0, 0};
+	
+	// draw elements
+	chx_draw_all();
 	
 	// call main loop
 	chx_main();

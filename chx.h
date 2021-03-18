@@ -64,15 +64,15 @@
 	(byte & 0x01 ? '1' : '0')
 
 #define WORD(X) *((uint16_t*) &X)
-#define INT8_AT(X, P) *((int8_t*) (X + P))
-#define INT16_AT(X, P) *((int16_t*) (X + P))
-#define INT32_AT(X, P) *((int32_t*) (X + P))
-#define INT64_AT(X, P) *((int64_t*) (X + P))
-#define UINT8_AT(X, P) *((uint8_t*) (X + P))
-#define UINT16_AT(X, P) *((uint16_t*) (X + P))
-#define UINT32_AT(X, P) *((uint32_t*) (X + P))
-#define UINT64_AT(X, P) *((uint64_t*) (X + P))
-#define WCHAR_AT(X, P) (wchar_t) *((int16_t*) (X + P))
+#define INT8_AT(X) *((int8_t*) (X))
+#define INT16_AT(X) *((int16_t*) (X))
+#define INT32_AT(X) *((int32_t*) (X))
+#define INT64_AT(X) *((int64_t*) (X))
+#define UINT8_AT(X) *((uint8_t*) (X))
+#define UINT16_AT(X) *((uint16_t*) (X))
+#define UINT32_AT(X) *((uint32_t*) (X))
+#define UINT64_AT(X) *((uint64_t*) (X))
+#define WCHAR_AT(X) (wchar_t) *((int16_t*) (X))
 
 struct chx_command {
 	void (*execute)(void);
@@ -142,6 +142,7 @@ void chx_print_status();
 void chx_draw_contents();
 void chx_draw_sidebar();
 void chx_draw_extra();
+void chx_draw_all();
 void chx_redraw_line();
 
 void chx_main();

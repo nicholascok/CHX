@@ -11,53 +11,76 @@ void chx_replace_mode_toggle() {
 }
 
 void chx_update_cursor() {
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	// stop cursor at 0;
+	CINST.cursor.pos *= (CINST.cursor.pos >= 0);
+	
+	// scroll if pasting outside of visible screen
+	if (CINST.cursor.pos > (CINST.scroll_pos - 1) * CINST.bytes_per_row + CINST.num_bytes) {
+		CINST.scroll_pos = (CINST.cursor.pos - CINST.num_bytes) / CINST.bytes_per_row + 1;
+		chx_draw_contents();
+	} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
+		CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
+		chx_draw_contents();
+	}
+	
+	// redraw cursor
 	chx_draw_extra();
 	chx_draw_sidebar();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
 }
 
 void chx_swap_endianness() {
 	CINST.endianness = ! CINST.endianness;
 	chx_draw_extra();
+	fflush(stdout);
+}
+
+void chx_cursor_move_vertical_by(int _n) {
+	CINST.cursor.pos += _n * CINST.bytes_per_row;
+	chx_update_cursor();
+}
+
+void chx_cursor_move_horizontal_by(int _n) {
+	CINST.cursor.pos += _n;
+	chx_update_cursor();
+}
+
+void chx_cursor_move_up_by_5() {
+	chx_cursor_move_vertical_by(-5);
+}
+
+void chx_cursor_move_down_by_5() {
+	chx_cursor_move_vertical_by(5);
+}
+
+void chx_cursor_move_right_by_5() {
+	chx_cursor_move_horizontal_by(5);
+}
+
+void chx_cursor_move_left_by_5() {
+	chx_cursor_move_horizontal_by(-5);
 }
 
 void chx_cursor_move_up() {
 	CINST.cursor.pos -= (CINST.cursor.pos >= CINST.bytes_per_row) * CINST.bytes_per_row;
-	if (CINST.scroll_pos && CINST.cursor.pos / CINST.bytes_per_row - CINST.scroll_pos < 0) {
-		CINST.scroll_pos--;
-		chx_draw_contents();
-	}
 	chx_update_cursor();
 }
 
 void chx_cursor_move_down() {
 	CINST.cursor.pos += CINST.bytes_per_row;
-	if (CINST.cursor.pos >= CINST.num_bytes + CINST.scroll_pos * CINST.bytes_per_row) {
-		CINST.scroll_pos++;
-		chx_draw_contents();
-	}
 	chx_update_cursor();
 }
 
 void chx_cursor_move_right() {
 	CINST.cursor.pos += (CINST.cursor.sbpos == 1);
 	CINST.cursor.sbpos = !CINST.cursor.sbpos;
-	if (CINST.cursor.pos >= CINST.num_bytes + CINST.scroll_pos * CINST.bytes_per_row) {
-		CINST.scroll_pos++;
-		chx_draw_contents();
-	}
 	chx_update_cursor();
 }
 
 void chx_cursor_move_left() {
-	if (CINST.cursor.pos || CINST.cursor.sbpos) {
-		CINST.cursor.pos -= !CINST.cursor.sbpos;
-		CINST.cursor.sbpos = !CINST.cursor.sbpos;
-		if (CINST.cursor.pos - CINST.scroll_pos * CINST.bytes_per_row < 0) {
-			CINST.scroll_pos--;
-			chx_draw_contents();
-		}
-	}
+	CINST.cursor.pos -= !CINST.cursor.sbpos;
+	CINST.cursor.sbpos = !CINST.cursor.sbpos;
 	chx_update_cursor();
 }
 
@@ -70,6 +93,7 @@ void chx_start_selection() {
 void chx_clear_selection() {
 	CINST.selected = 0;
 	chx_draw_contents();
+	fflush(stdout);
 }
 
 void chx_cursor_select_up() {
@@ -77,6 +101,7 @@ void chx_cursor_select_up() {
 	chx_cursor_move_up();
 	CINST.sel_stop = CINST.cursor.pos;
 	chx_draw_contents();
+	fflush(stdout);
 }
 
 void chx_cursor_select_down() {
@@ -84,6 +109,7 @@ void chx_cursor_select_down() {
 	chx_cursor_move_down();
 	CINST.sel_stop = CINST.cursor.pos;
 	chx_draw_contents();
+	fflush(stdout);
 }
 
 void chx_cursor_select_right() {
@@ -91,6 +117,7 @@ void chx_cursor_select_right() {
 	chx_cursor_move_right();
 	CINST.sel_stop = CINST.cursor.pos;
 	chx_draw_contents();
+	fflush(stdout);
 }
 
 void chx_cursor_select_left() {
@@ -98,6 +125,7 @@ void chx_cursor_select_left() {
 	chx_cursor_move_left();
 	CINST.sel_stop = CINST.cursor.pos;
 	chx_draw_contents();
+	fflush(stdout);
 }
 
 long chx_abs(long _n) {
@@ -138,6 +166,7 @@ void chx_to_start() {
 	CINST.cursor.sbpos = 0;
 	CINST.scroll_pos = 0;
 	chx_draw_contents();
+	fflush(stdout);
 }
 
 void chx_to_end() {
@@ -146,6 +175,7 @@ void chx_to_end() {
 	int new_scroll = (CINST.cursor.pos / CINST.bytes_per_row) - CINST.num_rows / 2;
 	CINST.scroll_pos = (new_scroll >= 0) ? new_scroll : 0;
 	chx_draw_contents();
+	fflush(stdout);
 }
 
 void chx_set_hexchar(char _c) {
@@ -169,6 +199,7 @@ void chx_set_hexchar(char _c) {
 	CINST.saved = 0;
 	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
 	chx_redraw_line(CINST.cursor.pos);
+	fflush(stdout);
 }
 
 void chx_type_hexchar(char _c) {
@@ -199,7 +230,7 @@ void chx_backspace_hexchar() {
 	// if cursor is just after EOF, resize file to remove last byte
 	if (CINST.cursor.pos == CINST.fdata.len && !CINST.cursor.sbpos) {
 		chx_resize_file(CINST.fdata.len - 1);
-		chx_cursor_move_left();
+		CINST.cursor.pos--;
 	} else
 		chx_delete_hexchar();
 	
@@ -224,16 +255,18 @@ void chx_mode_set_default() {
 }
 
 void chx_revert() {
+	// reload file to remove unsaved changes
 	char* old_filename = CINST.fdata.filename;
 	CINST.fdata = chx_import(old_filename);
 	CINST.fdata.filename = old_filename;
 	CINST.saved = 1;
-	chx_draw_contents();
 	
 	// remove highlighting for unsaved data
 	free(CINST.style_data);
 	CINST.style_data = calloc(1, CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0));
-	chx_draw_contents();
+	
+	// redraw elements
+	chx_draw_all();
 }
 
 void chx_save() {
@@ -241,9 +274,11 @@ void chx_save() {
 	for (int i = 0; i < CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0); i++)
 		CINST.style_data[i] = 0;
 	
-	chx_export(CINST.fdata.filename);
+	// export file and redraw file contents
 	CINST.saved = 1;
+	chx_export(CINST.fdata.filename);
 	chx_draw_contents();
+	fflush(stdout);
 }
 
 char cmp_str(char* _a, char* _b) {
@@ -259,7 +294,7 @@ void str_terminate_at(char* _s, char _c) {
 }
 
 void chx_save_as() {
-	chx_draw_contents();
+	chx_draw_all();
 	
 	// setup user input buffer
 	char usrin[256];
@@ -286,9 +321,8 @@ void chx_save_as() {
 	printf("\e[1A\e[2K");
 	fflush(stdout);
 	
-	// redraw contents
-	chx_draw_contents();
-	chx_print_status();
+	// redraw elements
+	chx_draw_all();
 }
 
 void chx_copy() {
@@ -302,15 +336,6 @@ void chx_copy() {
 
 void chx_execute_last_action() {
 	CINST.last_action();
-}
-
-void chx_cursor_move_by(int _n) {
-	CINST.cursor.pos += _n;
-	if (CINST.cursor.pos < 0) {
-		CINST.cursor.pos = 0;
-		CINST.cursor.sbpos = 0;
-	}
-	chx_update_cursor();
 }
 
 void chx_paste_before() {
@@ -331,9 +356,10 @@ void chx_paste_before() {
 	}
 	
 	// move cursor to beginning of pasted data
+	CINST.cursor.pos -= CINST.copy_buffer_len;
 	CINST.cursor.sbpos = 1;
-	chx_cursor_move_by(-CINST.copy_buffer_len);
 	chx_draw_contents();
+	chx_update_cursor();
 }
 
 void chx_paste_after() {
@@ -354,9 +380,10 @@ void chx_paste_after() {
 	}
 	
 	// move cursor to end of pasted data
-	CINST.cursor.sbpos = 0;
-	chx_cursor_move_by(CINST.copy_buffer_len);
+	CINST.cursor.pos += CINST.copy_buffer_len;
+	CINST.cursor.sbpos = 1;
 	chx_draw_contents();
+	chx_update_cursor();
 }
 
 void chx_clear_buffer() {
@@ -380,7 +407,7 @@ void chx_delete_selected() {
 		CINST.cursor.pos = (sel_begin > 0) ? sel_begin - 1 : 0;
 		CINST.cursor.sbpos = 1;
 		chx_clear_selection();
-		chx_draw_contents();
+		chx_draw_all();
 	}
 }
 
@@ -396,7 +423,7 @@ void chx_exit() {
 }
 
 void chx_quit() {
-	chx_draw_contents();
+	chx_draw_all();
 	
 	// ask user if they would like to save
 	if (!CINST.saved) {
