@@ -244,6 +244,7 @@ void chx_draw_sidebar() {
 void chx_prompt_command() {
 	// setup user input buffer
 	char usrin[256];
+	usrin[0] = 0;
 	
 	// command interpreter recieve user input
 	cur_set(0, CINST.height);
@@ -256,22 +257,24 @@ void chx_prompt_command() {
 	str_terminate_at(usrin, '\n');
 	
 	// lookup entered command and execute procedure
-	if (str_is_num(usrin)) {
-		CINST.cursor.pos = str_to_num(usrin) - 1;
-		CINST.cursor.sbpos = 0;
-		chx_update_cursor();
-		chx_draw_all();
-	} else if (WORD(usrin) == 0x7830 && str_is_hex(usrin + 2)) {
-		CINST.cursor.pos = str_to_hex(usrin + 2) - 1;
-		CINST.cursor.sbpos = 0;
-		chx_update_cursor();
-		chx_draw_all();
-	} else
-		for (int i = 0; chx_commands[i].str; i++)
-			if (cmp_str(chx_commands[i].str, usrin)) {
-				chx_commands[i].execute();
-				CINST.last_action = chx_commands[i].execute;
-			}
+	if (usrin[0]) {
+		if (str_is_num(usrin)) {
+			CINST.cursor.pos = str_to_num(usrin) - 1;
+			CINST.cursor.sbpos = 0;
+			chx_update_cursor();
+			chx_draw_all();
+		} else if (WORD(usrin) == 0x7830 && str_is_hex(usrin + 2)) {
+			CINST.cursor.pos = str_to_hex(usrin + 2) - 1;
+			CINST.cursor.sbpos = 0;
+			chx_update_cursor();
+			chx_draw_all();
+		} else
+			for (int i = 0; chx_commands[i].str; i++)
+				if (cmp_str(chx_commands[i].str, usrin)) {
+					chx_commands[i].execute();
+					CINST.last_action = chx_commands[i].execute;
+				}
+	}
 	
 	// redraw elements
 	chx_draw_all();

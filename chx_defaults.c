@@ -310,7 +310,7 @@ void chx_revert() {
 
 void chx_save() {
 	// remove highlighting for unsaved data
-	for (int i = 0; i < CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0); i++)
+	for (int i = 0; i < CINST.fdata.len / 8; i++)
 		CINST.style_data[i] = 0;
 	
 	// export file and redraw file contents
@@ -353,7 +353,7 @@ void chx_save_as() {
 	if (usrin[0]) {
 		chx_export(usrin);
 		CINST.saved = 1;
-		for (int i = 0; i < CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0); i++)
+		for (int i = 0; i < CINST.fdata.len / 8; i++)
 			CINST.style_data[i] = 0;
 	}
 	
@@ -390,7 +390,7 @@ void chx_paste_before() {
 		chx_resize_file(CINST.cursor.pos + 1);
 	
 	// copy data into file buffer
-	for (int i = 0; i < CINST.copy_buffer_len && CINST.cursor.pos - i >= 0; i++) {
+	for (int i = 0; i < CINST.copy_buffer_len && CINST.cursor.pos - i > 0; i++) {
 		CINST.fdata.data[CINST.cursor.pos - i] = CINST.copy_buffer[CINST.copy_buffer_len - i - 1];
 		CINST.style_data[(CINST.cursor.pos - i) / 8] |= 0x80 >> ((CINST.cursor.pos - i) % 8);
 	}
@@ -437,7 +437,7 @@ void chx_delete_selected() {
 		long sel_begin = min(CINST.sel_start, CINST.sel_stop);
 		long sel_end = max(CINST.sel_start, CINST.sel_stop);
 		CINST.saved = 0;
-		if (sel_end >= CINST.fdata.len - 1)
+		if (sel_end > CINST.fdata.len - 1)
 			chx_resize_file(sel_begin);
 		else
 			for (int i = sel_begin; i < sel_end + 1; i++) {
@@ -477,7 +477,9 @@ void chx_quit() {
 				chx_export(CINST.fdata.filename);
 				break;
 			default:
-				cls();
+				// erase save dialoge and redraw elements
+				printf("\e[1A\e[2K");
+				chx_draw_all();
 				chx_main();
 				break;
 			case 'n':
