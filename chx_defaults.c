@@ -2,12 +2,16 @@ void chx_insert_mode_toggle() {
 	if (CINST.mode == CHX_MODE_INSERT) CINST.mode = CHX_MODE_DEFAULT;
 	else CINST.mode = CHX_MODE_INSERT;
 	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
 }
 
 void chx_replace_mode_toggle() {
 	if (CINST.mode == CHX_MODE_REPLACE) CINST.mode = CHX_MODE_DEFAULT;
 	else CINST.mode = CHX_MODE_REPLACE;
 	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
 }
 
 void chx_update_cursor() {
@@ -24,16 +28,25 @@ void chx_update_cursor() {
 	}
 	
 	// redraw cursor
-	chx_draw_extra();
-	chx_draw_sidebar();
+	#ifdef CHX_SHOW_INSPECTOR
+		chx_draw_extra();
+	#endif
+	
+	#ifdef CHX_SHOW_PREVIEW
+		chx_draw_sidebar();
+	#endif
+	
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
 void chx_swap_endianness() {
 	CINST.endianness = ! CINST.endianness;
-	chx_draw_extra();
-	fflush(stdout);
+	#ifdef CHX_SHOW_INSPECTOR
+		chx_draw_extra();
+		cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+		fflush(stdout);
+	#endif
 }
 
 void chx_cursor_move_vertical_by(int _n) {
@@ -93,6 +106,7 @@ void chx_start_selection() {
 void chx_clear_selection() {
 	CINST.selected = 0;
 	chx_draw_contents();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
@@ -101,6 +115,7 @@ void chx_cursor_select_up() {
 	chx_cursor_move_up();
 	CINST.sel_stop = CINST.cursor.pos;
 	chx_draw_contents();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
@@ -109,6 +124,7 @@ void chx_cursor_select_down() {
 	chx_cursor_move_down();
 	CINST.sel_stop = CINST.cursor.pos;
 	chx_draw_contents();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
@@ -117,6 +133,7 @@ void chx_cursor_select_right() {
 	chx_cursor_move_right();
 	CINST.sel_stop = CINST.cursor.pos;
 	chx_draw_contents();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
@@ -125,6 +142,7 @@ void chx_cursor_select_left() {
 	chx_cursor_move_left();
 	CINST.sel_stop = CINST.cursor.pos;
 	chx_draw_contents();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
@@ -199,7 +217,6 @@ void chx_to_start() {
 	CINST.cursor.sbpos = 0;
 	CINST.scroll_pos = 0;
 	chx_draw_all();
-	fflush(stdout);
 }
 
 void chx_to_end() {
@@ -208,7 +225,6 @@ void chx_to_end() {
 	int new_scroll = (CINST.cursor.pos / CINST.bytes_per_row) - CINST.num_rows / 2;
 	CINST.scroll_pos = (new_scroll >= 0) ? new_scroll : 0;
 	chx_draw_all();
-	fflush(stdout);
 }
 
 void chx_set_hexchar(char _c) {
@@ -232,6 +248,7 @@ void chx_set_hexchar(char _c) {
 	CINST.saved = 0;
 	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
 	chx_redraw_line(CINST.cursor.pos);
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
@@ -275,16 +292,22 @@ void chx_backspace_hexchar() {
 void chx_mode_set_insert() {
 	CINST.mode = CHX_MODE_INSERT;
 	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
 }
 
 void chx_mode_set_replace() {
 	CINST.mode = CHX_MODE_REPLACE;
 	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
 }
 
 void chx_mode_set_default() {
 	CINST.mode = CHX_MODE_DEFAULT;
 	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
 }
 
 void chx_revert() {
@@ -311,6 +334,7 @@ void chx_save() {
 	CINST.saved = 1;
 	chx_export(CINST.fdata.filename);
 	chx_draw_contents();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
@@ -414,7 +438,7 @@ void chx_paste_after() {
 	
 	// move cursor to end of pasted data
 	CINST.cursor.pos += CINST.copy_buffer_len;
-	CINST.cursor.sbpos = 1;
+	CINST.cursor.sbpos = 0;
 	chx_draw_contents();
 	chx_update_cursor();
 }

@@ -47,10 +47,21 @@
 #define CINST CHX_INSTANCES[CHX_SEL_INSTANCE]
 #define BETWEEN(X, A, B) (X >= min(A, B) && X <= max(A, B))
 #define CHX_CONTENT_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + CINST.group_spacing)
-#define CHX_SIDEBAR_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + 2 * CINST.group_spacing + CINST.bytes_per_row)
+#define CHX_PREVIEW_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + 2 * CINST.group_spacing + CINST.bytes_per_row)
 #define CHX_CURSOR_X (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((CINST.cursor.pos % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (CINST.cursor.pos % CINST.bytes_in_group) + CINST.cursor.sbpos + CINST.group_spacing)
 #define CHX_CURSOR_Y (int) (CINST.cursor.pos / CINST.bytes_per_row - CINST.scroll_pos + TPD)
 #define CHX_GET_Y(X) (int) (X / CINST.bytes_per_row - CINST.scroll_pos + TPD)
+
+#define CHX_SHOW_PREVIEW
+#define CHX_SHOW_INSPECTOR
+
+#define CHX_PREVIEW_OFFSET CHX_CONTENT_END
+
+#ifdef CHX_SHOW_PREVIEW
+	#define CHX_INSPECTOR_OFFSET CHX_PREVIEW_END
+#else
+	#define CHX_INSPECTOR_OFFSET CHX_CONTENT_END
+#endif
 
 #define BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte) \
@@ -118,6 +129,7 @@ struct CHX_INSTANCE {
 	char selected;
 	char saved;
 	char mode;
+	char show_extra;
 };
 
 struct CHX_INSTANCE CHX_INSTANCES[8];

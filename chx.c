@@ -49,7 +49,7 @@ void chx_redraw_line(int byte) {
 	}
 	
 	// draw ascii preview
-	cur_set(CHX_CONTENT_END, CHX_GET_Y(byte));
+	cur_set(CHX_PREVIEW_OFFSET, CHX_GET_Y(byte));
 	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
 		if (i == CINST.cursor.pos)
 			printf(CHX_ASCII_SELECT_COLOUR);
@@ -95,46 +95,52 @@ void chx_draw_extra() {
 			buf[i] = 0;
 	
 	// print inspected data
-	cur_set(CHX_SIDEBAR_END, 0);
+	cur_set(CHX_INSPECTOR_OFFSET, 0);
 	printf("\e[1m");
 	printf("\e[0KData Inspector:");
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kbinary: "BINARY_PATTERN, BYTE_TO_BINARY(buf[0]));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kint8: %i", INT8_AT(&buf));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kint16: %i", (CINST.endianness) ? INT16_AT(&buf) : __bswap_16 (INT16_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kint32: %i", (CINST.endianness) ? INT32_AT(&buf) : __bswap_32 (INT32_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kint64: %li", (CINST.endianness) ? INT64_AT(&buf) : __bswap_64 (INT64_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kuint8: %u", UINT8_AT(&buf));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kuint16: %u", (CINST.endianness) ? UINT16_AT(&buf) : __bswap_16 (UINT16_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kuint32: %u", (CINST.endianness) ? UINT32_AT(&buf) : __bswap_32 (UINT32_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kuint64: %lu", (CINST.endianness) ? UINT64_AT(&buf) : __bswap_64 (UINT64_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	if (IS_PRINTABLE(buf[0]))
 		printf("\e[0KANSI char: %c", buf[0]);
 	else
 		printf("\e[0KANSI char: \ufffd");
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
 	printf("\e[0Kwide char: %lc", (CINST.endianness) ? WCHAR_AT(&buf) : __bswap_16 (WCHAR_AT(&buf)));
-	printf("\e[%dG\e[1B\e[0K\e[1B ", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B\e[0K\e[1B ", CHX_INSPECTOR_OFFSET);
 	if (CINST.endianness) printf("\e[0K[LITTLE ENDIAN]");
 	else printf("\e[0K[BIG ENDIAN]");
-	printf("\e[%dG\e[1B\e[0K\e[0m", CHX_SIDEBAR_END);
+	printf("\e[%dG\e[1B\e[0K\e[0m", CHX_INSPECTOR_OFFSET);
 }
 
 void chx_draw_all() {
 	// draw elements
+	#ifdef CHX_SHOW_PREVIEW
+		chx_draw_sidebar();
+	#endif
+	
+	#ifdef CHX_SHOW_INSPECTOR
+		chx_draw_extra();
+	#endif
+	
 	chx_draw_contents();
-	chx_draw_sidebar();
 	chx_print_status();
-	chx_draw_extra();
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
@@ -176,7 +182,7 @@ void chx_draw_contents() {
 }
 
 void chx_draw_sidebar() {
-	cur_set(CHX_CONTENT_END, 0);
+	cur_set(CHX_PREVIEW_OFFSET, 0);
 	printf("%-*c", CINST.bytes_per_row, ' ');
 	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_bytes; i++) {
 		if (i == CINST.cursor.pos)
@@ -184,7 +190,7 @@ void chx_draw_sidebar() {
 		else if (i == CINST.cursor.pos + 1)
 			printf("\e[0m");
 		if (!(i % CINST.bytes_per_row))
-			cur_set(CHX_CONTENT_END, CHX_GET_Y(i));
+			cur_set(CHX_PREVIEW_OFFSET, CHX_GET_Y(i));
 		if (i < CINST.fdata.len) {
 			if (IS_PRINTABLE(CINST.fdata.data[i]))
 				printf("%c", CINST.fdata.data[i]);
