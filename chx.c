@@ -348,6 +348,7 @@ int main(int argc, char** argv) {
 	CINST.row_num_len = CHX_ROW_NUM_LEN;
 	CINST.num_rows = size.ws_row - PD;
 	CINST.num_bytes = CINST.num_rows * CINST.bytes_per_row;
+	CINST.endianness = CHX_DEFAULT_ENDIANNESS;
 	CINST.saved = 1;
 	
 	// initialize cursor

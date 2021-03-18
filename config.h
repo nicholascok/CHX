@@ -20,6 +20,8 @@
 #define CHX_GROUP_SPACING 1
 #define CHX_ROW_NUM_LEN 8
 
+#define CHX_DEFAULT_ENDIANNESS CHX_LITTLE_ENDIAN
+
 // GLOBAL KEYBINDS (WORK IN ANY MODE)
 void (*chx_keybinds_global[])(void) = {
 	[KEY_MAX_VAL] = fvoid, // do not remove
