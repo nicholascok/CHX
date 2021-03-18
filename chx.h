@@ -27,6 +27,18 @@
 #define CHX_LITTLE_ENDIAN 1
 #define CHX_BIG_ENDIAN 0
 
+#define FORMAT_UNDERLINE "\e[4m"
+#define COLOUR_REVERSE "\e[7m"
+#define COLOUR_BLACK "\e[30m"
+#define COLOUR_RED "\e[31m"
+#define COLOUR_GREEN "\e[32m"
+#define COLOUR_YELLOW "\e[33m"
+#define COLOUR_BLUE "\e[34m"
+#define COLOUR_MAGENTA "\e[35m"
+#define COLOUR_CYAN "\e[36m"
+#define COLOUR_WHITE "\e[37m"
+#define COLOUR_GREY "\e[90m"
+
 #define IS_PRINTABLE(C) (C > 0x1F && C < 0x7F)
 #define IS_LETTER(C) ((C ^ 0x40) < 26 || (C ^ 0x60) < 26)
 #define IS_CHAR_HEX(C) ((C ^ 0x40) < 7 || (C ^ 0x60) < 7 || (C ^ 0x30) < 10)
@@ -37,7 +49,8 @@
 #define CHX_CONTENT_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + CINST.group_spacing)
 #define CHX_SIDEBAR_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + 2 * CINST.group_spacing + CINST.bytes_per_row)
 #define CHX_CURSOR_X (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((CINST.cursor.pos % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (CINST.cursor.pos % CINST.bytes_in_group) + CINST.cursor.sbpos + CINST.group_spacing)
-#define CHX_CURSOR_Y (int) ((CINST.cursor.pos - CINST.scroll_pos) / CINST.bytes_per_row + TPD)
+#define CHX_CURSOR_Y (int) (CINST.cursor.pos / CINST.bytes_per_row - CINST.scroll_pos + TPD)
+#define CHX_GET_Y(X) (int) (X / CINST.bytes_per_row - CINST.scroll_pos + TPD)
 
 #define BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte) \
@@ -87,6 +100,7 @@ struct CHX_INSTANCE {
 	char* copy_buffer;
 	struct chx_finfo fdata;
 	struct CHX_CURSOR cursor;
+	void (*last_action)(void);
 	char bytes_per_row;
 	char bytes_in_group;
 	char group_spacing;
@@ -108,6 +122,11 @@ struct CHX_INSTANCE {
 
 struct CHX_INSTANCE CHX_INSTANCES[8];
 int CHX_SEL_INSTANCE = 0;
+
+void (*chx_keybinds_global[])(void);
+void (*chx_keybinds_mode_command[])(void);
+void (*func_exceptions[])(void);
+struct chx_command chx_commands[];
 
 void fvoid() {};
 

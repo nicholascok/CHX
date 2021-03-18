@@ -30,18 +30,18 @@ void chx_redraw_line(int byte) {
 	int line_start = (byte / CINST.bytes_per_row) * CINST.bytes_per_row;
 	
 	// print row number
-	printf("\e[1;34m\e[%d;0H%0*X \e[0m", (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD + 1, CINST.row_num_len, line_start);
+	printf(CHX_FRAME_COLOUR"\e[%d;0H%0*X \e[0m", CHX_GET_Y(byte) + 1, CINST.row_num_len, line_start);
 	
 	// print row contents
-	cur_set(CINST.row_num_len + CINST.group_spacing, (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
+	cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(byte));
 	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
 		if (i % CINST.bytes_per_row && !(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
 		if (i < CINST.fdata.len) {
 			if (CINST.selected && BETWEEN(i, CINST.sel_start, CINST.sel_stop))
-				printf("\e[7m%02X\e[0m", CINST.fdata.data[i]);
+				printf(CHX_SELECT_COLOUR"%02X\e[0m", CINST.fdata.data[i]);
 			else if (CINST.style_data[i / 8] & (0x80 >> (i % 8)))
-				printf("\e[1;33m%02X\e[0m", CINST.fdata.data[i]);
+				printf(CHX_UNSAVED_COLOUR"%02X\e[0m", CINST.fdata.data[i]);
 			else
 				printf("%02X", CINST.fdata.data[i]);
 		} else
@@ -49,10 +49,10 @@ void chx_redraw_line(int byte) {
 	}
 	
 	// draw ascii preview
-	cur_set(CHX_CONTENT_END, (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
+	cur_set(CHX_CONTENT_END, CHX_GET_Y(byte));
 	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
 		if (i == CINST.cursor.pos)
-			printf("\e[7m");
+			printf(CHX_ASCII_SELECT_COLOUR);
 		else if (i == CINST.cursor.pos + 1)
 			printf("\e[0m");
 		if (i < CINST.fdata.len) {
@@ -90,14 +90,15 @@ void chx_print_status() {
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	
 	fflush(stdout);
 }
 
 void chx_draw_extra() {
 	if (CINST.cursor.pos < CINST.fdata.len) {
-		cur_set(CHX_SIDEBAR_END, TPD);
+		cur_set(CHX_SIDEBAR_END, 0);
 		printf("\e[1m");
+		printf("\e[0KData Inspector:");
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
 		printf("\e[0Kbinary: "BINARY_PATTERN, BYTE_TO_BINARY(CINST.fdata.data[CINST.cursor.pos]));
 		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
 		printf("\e[0Kint8: %i", INT8_AT(CINST.fdata.data, CINST.cursor.pos));
@@ -121,7 +122,7 @@ void chx_draw_extra() {
 		else
 			printf("\e[0KANSI char: \ufffd");
 		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-		printf("\e[0Kwide char: %lc", WCHAR_AT(CINST.fdata.data, CINST.cursor.pos));
+		printf("\e[0Kwide char: %lc", (CINST.endianness) ? WCHAR_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_16 (WCHAR_AT(CINST.fdata.data, CINST.cursor.pos)));
 		printf("\e[%dG\e[1B\e[0K\e[1B ", CHX_SIDEBAR_END);
 		if (CINST.endianness) printf("\e[0K[LITTLE ENDIAN]");
 		else printf("\e[0K[BIG ENDIAN]");
@@ -130,13 +131,12 @@ void chx_draw_extra() {
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	
 	fflush(stdout);
 }
 
 void chx_draw_contents() {
 	// print header
-	printf("\e[0;0H%-*c\e[1;34m", CINST.row_num_len + CINST.group_spacing, ' ');
+	printf("\e[0;0H%-*c"CHX_FRAME_COLOUR, CINST.row_num_len + CINST.group_spacing, ' ');
 	if (CINST.group_spacing != 0)
 		for (int i = 0; i < CINST.bytes_per_row / CINST.bytes_in_group; i++)
 			printf("%02X%-*c", i * CINST.bytes_in_group, CINST.bytes_in_group * 2 + CINST.group_spacing - 2, ' ');
@@ -146,21 +146,21 @@ void chx_draw_contents() {
 	
 	// print row numbers
 	for (int i = 0; i < CINST.num_rows; i++)
-		printf("\e[%d;0H%0*lX", i + TPD + 1, CINST.row_num_len, i * CINST.bytes_per_row + CINST.scroll_pos);
+		printf("\e[%d;0H%0*lX", i + TPD + 1, CINST.row_num_len, (i + CINST.scroll_pos) * CINST.bytes_per_row);
 	
 	printf("\e[0m");
 	
 	// print main contents
-	for (int i = CINST.scroll_pos; i < CINST.scroll_pos + CINST.num_bytes; i++) {
+	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_bytes; i++) {
 		if (!(i % CINST.bytes_per_row))
-			cur_set(CINST.row_num_len + CINST.group_spacing, (int) (i - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
+			cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(i));
 		else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
 		if (i < CINST.fdata.len) {
 			if (CINST.selected && BETWEEN(i, CINST.sel_start, CINST.sel_stop))
-				printf("\e[7m%02X\e[0m", CINST.fdata.data[i]);
+				printf(CHX_SELECT_COLOUR"%02X\e[0m", CINST.fdata.data[i]);
 			else if (CINST.style_data[i / 8] & (0x80 >> (i % 8)))
-				printf("\e[1;33m%02X\e[0m", CINST.fdata.data[i]);
+				printf(CHX_UNSAVED_COLOUR"%02X\e[0m", CINST.fdata.data[i]);
 			else
 				printf("%02X", CINST.fdata.data[i]);
 		} else
@@ -168,17 +168,20 @@ void chx_draw_contents() {
 	}
 	
 	chx_draw_sidebar();
+	chx_print_status();
 	chx_draw_extra();
 }
 
 void chx_draw_sidebar() {
-	for (int i = CINST.scroll_pos; i < CINST.scroll_pos + CINST.num_bytes; i++) {
+	cur_set(CHX_CONTENT_END, 0);
+	printf("%-*c", CINST.bytes_per_row, ' ');
+	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_bytes; i++) {
 		if (i == CINST.cursor.pos)
-			printf("\e[7m");
+			printf(CHX_ASCII_SELECT_COLOUR);
 		else if (i == CINST.cursor.pos + 1)
 			printf("\e[0m");
 		if (!(i % CINST.bytes_per_row))
-			cur_set(CHX_CONTENT_END, (int) (i - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
+			cur_set(CHX_CONTENT_END, CHX_GET_Y(i));
 		if (i < CINST.fdata.len) {
 			if (IS_PRINTABLE(CINST.fdata.data[i]))
 				printf("%c", CINST.fdata.data[i]);
@@ -210,8 +213,10 @@ void chx_prompt_command() {
 	
 	// lookup entered command and execute procedure
 	for (int i = 0; chx_commands[i].str; i++)
-		if (cmp_str(chx_commands[i].str, usrin))
+		if (cmp_str(chx_commands[i].str, usrin)) {
 			chx_commands[i].execute();
+			CINST.last_action = chx_commands[i].execute;
+		}
 	
 	// redraw contents
 	chx_print_status();
@@ -226,14 +231,28 @@ void chx_main() {
 	// main loop
 	for(struct chx_key key;; key = chx_get_key()) {
 		// control keys are global
-		if (chx_keybinds_global[WORD(key)]) chx_keybinds_global[WORD(key)]();
+		if (chx_keybinds_global[WORD(key)]) {
+			chx_keybinds_global[WORD(key)]();
+			char is_valid = 1;
+			for (int i = 0; i < sizeof(func_exceptions) / sizeof(void*); i++)
+				if (chx_keybinds_global[WORD(key)] == func_exceptions[i])
+					is_valid = 0;
+			if (is_valid) CINST.last_action = chx_keybinds_global[WORD(key)];
+		}
 		if (CINST.selected && CINST.cursor.pos != CINST.sel_stop) chx_clear_selection();
 		
 		// keys have different actions depending on active mode setting
 		switch (CINST.mode) {
 			default:
 			case CHX_MODE_DEFAULT:
-				if (chx_keybinds_mode_command[WORD(key)]) chx_keybinds_mode_command[WORD(key)]();
+				if (chx_keybinds_mode_command[WORD(key)]) {
+					chx_keybinds_mode_command[WORD(key)]();
+					char is_valid = 1;
+					for (int i = 0; i < sizeof(func_exceptions) / sizeof(void*); i++)
+						if (chx_keybinds_mode_command[WORD(key)] == func_exceptions[i])
+							is_valid = 0;
+					if (is_valid) CINST.last_action = chx_keybinds_mode_command[WORD(key)];
+				}
 				break;
 			case CHX_MODE_INSERT:
 				if (IS_CHAR_HEX(WORD(key))) chx_type_hexchar(WORD(key));
@@ -265,9 +284,10 @@ struct chx_key chx_get_key() {
 		// check the type of key press (ALT, ESCAPE, etc.)
 		switch (buf[0]) {
 			case 0x1B:
-				if (buf[5]) key = (struct chx_key) {buf[5], 0x03};
-				else if (buf[1] == 0x5B || !buf[1]) key = (struct chx_key) {buf[2], 0x02};
-				else key = (struct chx_key) {buf[1], 0x01};
+				if (buf[5] == '~') key = (struct chx_key) {buf[2], buf[4] - 0x30};
+				else if (buf[5]) key = (struct chx_key) {buf[5], buf[4] - 0x30};
+				else if (buf[1] == 0x5B || !buf[1]) key = (struct chx_key) {buf[2], 0x01};
+				else key = (struct chx_key) {buf[1], 0x03};
 				break;
 			default:
 				key = (struct chx_key) {buf[0], 0};
@@ -349,6 +369,7 @@ int main(int argc, char** argv) {
 	CINST.num_rows = size.ws_row - PD;
 	CINST.num_bytes = CINST.num_rows * CINST.bytes_per_row;
 	CINST.endianness = CHX_DEFAULT_ENDIANNESS;
+	CINST.last_action = fvoid;
 	CINST.saved = 1;
 	
 	// initialize cursor

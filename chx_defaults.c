@@ -23,8 +23,8 @@ void chx_swap_endianness() {
 
 void chx_cursor_move_up() {
 	CINST.cursor.pos -= (CINST.cursor.pos >= CINST.bytes_per_row) * CINST.bytes_per_row;
-	if (CINST.scroll_pos && CINST.cursor.pos - CINST.scroll_pos < 0) {
-		CINST.scroll_pos -= CINST.bytes_per_row;
+	if (CINST.scroll_pos && CINST.cursor.pos / CINST.bytes_per_row - CINST.scroll_pos < 0) {
+		CINST.scroll_pos--;
 		chx_draw_contents();
 	}
 	chx_update_cursor();
@@ -32,8 +32,8 @@ void chx_cursor_move_up() {
 
 void chx_cursor_move_down() {
 	CINST.cursor.pos += CINST.bytes_per_row;
-	if (CINST.cursor.pos >= CINST.num_bytes + CINST.scroll_pos) {
-		CINST.scroll_pos += CINST.bytes_per_row;
+	if (CINST.cursor.pos >= CINST.num_bytes + CINST.scroll_pos * CINST.bytes_per_row) {
+		CINST.scroll_pos++;
 		chx_draw_contents();
 	}
 	chx_update_cursor();
@@ -42,8 +42,8 @@ void chx_cursor_move_down() {
 void chx_cursor_move_right() {
 	CINST.cursor.pos += (CINST.cursor.sbpos == 1);
 	CINST.cursor.sbpos = !CINST.cursor.sbpos;
-	if (CINST.cursor.pos >= CINST.num_bytes + CINST.scroll_pos) {
-		CINST.scroll_pos += CINST.bytes_per_row;
+	if (CINST.cursor.pos >= CINST.num_bytes + CINST.scroll_pos * CINST.bytes_per_row) {
+		CINST.scroll_pos++;
 		chx_draw_contents();
 	}
 	chx_update_cursor();
@@ -53,8 +53,8 @@ void chx_cursor_move_left() {
 	if (CINST.cursor.pos || CINST.cursor.sbpos) {
 		CINST.cursor.pos -= !CINST.cursor.sbpos;
 		CINST.cursor.sbpos = !CINST.cursor.sbpos;
-		if (CINST.cursor.pos - CINST.scroll_pos < 0) {
-			CINST.scroll_pos -= CINST.bytes_per_row;
+		if (CINST.cursor.pos - CINST.scroll_pos * CINST.bytes_per_row < 0) {
+			CINST.scroll_pos--;
 			chx_draw_contents();
 		}
 	}
@@ -127,10 +127,31 @@ void chx_resize_file(long _n) {
 	CINST.fdata.len = _n;
 }
 
+void chx_to_line_start() {
+	CINST.cursor.pos -= CINST.cursor.pos % CINST.bytes_per_row;
+	CINST.cursor.sbpos = 0;
+	chx_update_cursor();
+}
+
+void chx_to_start() {
+	CINST.cursor.pos = 0;
+	CINST.cursor.sbpos = 0;
+	CINST.scroll_pos = 0;
+	chx_draw_contents();
+}
+
+void chx_to_end() {
+	CINST.cursor.pos = CINST.fdata.len - 1;
+	CINST.cursor.sbpos = 1;
+	int new_scroll = (CINST.cursor.pos / CINST.bytes_per_row) - CINST.num_rows / 2;
+	CINST.scroll_pos = (new_scroll >= 0) ? new_scroll : 0;
+	chx_draw_contents();
+}
+
 void chx_set_hexchar(char _c) {
 	if (!IS_CHAR_HEX(_c)) return; // only accept hex characters
 	if ((_c ^ 0x60) < 7) _c -= 32; // ensure everything is upper-case
-	printf("\e[1;33m%c\e[0m", _c); // print the character on the screen
+	printf("\e[31m%c\e[0m", _c); // print the character on the screen
 	
 	char nullkey[2] = {_c, 0};
 	
@@ -156,6 +177,8 @@ void chx_type_hexchar(char _c) {
 }
 
 void chx_delete_hexchar() {
+	CINST.saved = 0;
+	
 	// only delete if cursor is before EOF
 	if (CINST.cursor.pos < CINST.fdata.len)
 		if (CINST.cursor.sbpos)
@@ -163,21 +186,26 @@ void chx_delete_hexchar() {
 		else
 			CINST.fdata.data[CINST.cursor.pos] &= 0x0F;
 	
+	// hightlight as unsaved change
+	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
+	
 	// update screen
 	chx_redraw_line(CINST.cursor.pos);
 }
 
 void chx_backspace_hexchar() {
+	CINST.saved = 0;
+	
 	// if cursor is just after EOF, resize file to remove last byte
 	if (CINST.cursor.pos == CINST.fdata.len && !CINST.cursor.sbpos) {
 		chx_resize_file(CINST.fdata.len - 1);
 		chx_cursor_move_left();
-		chx_redraw_line(CINST.cursor.pos);
 	} else
 		chx_delete_hexchar();
 	
 	// move cursor after removing char
 	chx_cursor_move_left();
+	chx_redraw_line(CINST.cursor.pos);
 }
 
 void chx_mode_set_insert() {
@@ -196,22 +224,22 @@ void chx_mode_set_default() {
 }
 
 void chx_revert() {
-	CINST.fdata = chx_import(CINST.fdata.filename);
-	CINST.saved = 1;
+	// remove highlighting for unsaved data
 	for (int i = 0; i < CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0); i++)
 		CINST.style_data[i] = 0;
 	
-	// redraw content to remove unsaved highlights
+	CINST.fdata = chx_import(CINST.fdata.filename);
+	CINST.saved = 1;
 	chx_draw_contents();
 }
 
 void chx_save() {
-	chx_export(CINST.fdata.filename);
-	CINST.saved = 1;
+	// remove highlighting for unsaved data
 	for (int i = 0; i < CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0); i++)
 		CINST.style_data[i] = 0;
 	
-	// redraw content to remove unsaved highlights
+	chx_export(CINST.fdata.filename);
+	CINST.saved = 1;
 	chx_draw_contents();
 }
 
@@ -228,6 +256,8 @@ void str_terminate_at(char* _s, char _c) {
 }
 
 void chx_save_as() {
+	chx_draw_contents();
+	
 	// setup user input buffer
 	char usrin[256];
 	
@@ -255,6 +285,7 @@ void chx_save_as() {
 	
 	// redraw contents
 	chx_draw_contents();
+	chx_print_status();
 }
 
 void chx_copy() {
@@ -266,15 +297,62 @@ void chx_copy() {
 	for (int i = 0; i < CINST.copy_buffer_len; i++) CINST.copy_buffer[i] = CINST.fdata.data[sel_begin + i];
 }
 
-void chx_paste() {
+void chx_execute_last_action() {
+	CINST.last_action();
+}
+
+void chx_cursor_move_by(int _n) {
+	CINST.cursor.pos += _n;
+	if (CINST.cursor.pos < 0) {
+		CINST.cursor.pos = 0;
+		CINST.cursor.sbpos = 0;
+	}
+	chx_update_cursor();
+}
+
+void chx_paste_before() {
 	CINST.saved = 0;
+	
+	// scroll if pasting past visible screen
+	if (CINST.cursor.pos - CINST.copy_buffer_len < CINST.scroll_pos * CINST.bytes_per_row)
+		CINST.scroll_pos = ((CINST.cursor.pos - CINST.copy_buffer_len) / CINST.bytes_per_row > 0) ? (CINST.cursor.pos - CINST.copy_buffer_len) / CINST.bytes_per_row : 0;
+	
+	// resize file if pasting past end
+	if (CINST.cursor.pos > CINST.fdata.len)
+		chx_resize_file(CINST.cursor.pos + 1);
+	
+	// copy data into file buffer
+	for (int i = 0; i < CINST.copy_buffer_len && CINST.cursor.pos - i >= 0; i++) {
+		CINST.fdata.data[CINST.cursor.pos - i] = CINST.copy_buffer[CINST.copy_buffer_len - i - 1];
+		CINST.style_data[(CINST.cursor.pos - i) / 8] |= 0x80 >> ((CINST.cursor.pos - i) % 8);
+	}
+	
+	// move cursor to beginning of pasted data
+	CINST.cursor.sbpos = 1;
+	chx_cursor_move_by(-CINST.copy_buffer_len);
+	chx_draw_contents();
+}
+
+void chx_paste_after() {
+	CINST.saved = 0;
+	
+	// scroll if pasting past visible screen
+	if (CINST.cursor.pos + CINST.copy_buffer_len > CINST.scroll_pos * CINST.bytes_per_row + CINST.num_bytes)
+		CINST.scroll_pos = (CINST.cursor.pos + CINST.copy_buffer_len - CINST.num_bytes) / CINST.bytes_per_row + 1;
+	
+	// resize file if pasting past end
 	if (CINST.cursor.pos + CINST.copy_buffer_len > CINST.fdata.len)
 		chx_resize_file(CINST.cursor.pos + CINST.copy_buffer_len);
+	
+	// copy data into file buffer
 	for (int i = 0; i < CINST.copy_buffer_len; i++) {
 		CINST.fdata.data[CINST.cursor.pos + i] = CINST.copy_buffer[i];
 		CINST.style_data[(CINST.cursor.pos + i) / 8] |= 0x80 >> ((CINST.cursor.pos + i) % 8);
 	}
-	CINST.cursor.pos += CINST.copy_buffer_len;
+	
+	// move cursor to end of pasted data
+	CINST.cursor.sbpos = 0;
+	chx_cursor_move_by(CINST.copy_buffer_len);
 	chx_draw_contents();
 }
 
@@ -315,6 +393,8 @@ void chx_exit() {
 }
 
 void chx_quit() {
+	chx_draw_contents();
+	
 	// ask user if they would like to save
 	if (!CINST.saved) {
 		cur_set(0, CINST.height);
@@ -336,7 +416,5 @@ void chx_quit() {
 		}
 	}
 	
-	// restore terminal state
-	texit();
-	exit(0);
+	chx_exit();
 }
