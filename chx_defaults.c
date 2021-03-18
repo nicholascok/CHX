@@ -224,12 +224,15 @@ void chx_mode_set_default() {
 }
 
 void chx_revert() {
-	// remove highlighting for unsaved data
-	for (int i = 0; i < CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0); i++)
-		CINST.style_data[i] = 0;
-	
-	CINST.fdata = chx_import(CINST.fdata.filename);
+	char* old_filename = CINST.fdata.filename;
+	CINST.fdata = chx_import(old_filename);
+	CINST.fdata.filename = old_filename;
 	CINST.saved = 1;
+	chx_draw_contents();
+	
+	// remove highlighting for unsaved data
+	free(CINST.style_data);
+	CINST.style_data = calloc(1, CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0));
 	chx_draw_contents();
 }
 
