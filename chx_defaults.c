@@ -12,7 +12,14 @@ void chx_replace_mode_toggle() {
 
 void chx_update_cursor() {
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	chx_draw_extra();
 	chx_draw_sidebar();
+}
+
+void chx_swap_endianness() {
+	CINST.endianness = ! CINST.endianness;
+	chx_draw_extra();
+	fflush(stdout);
 }
 
 void chx_cursor_move_up() {

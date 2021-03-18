@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <malloc.h>
+#include <locale.h>
+#include <byteswap.h>
 #include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
@@ -30,9 +32,31 @@
 #define CINST CHX_INSTANCES[CHX_SEL_INSTANCE]
 #define BETWEEN(X, A, B) (X >= min(A, B) && X <= max(A, B))
 #define CHX_CONTENT_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + CINST.group_spacing)
+#define CHX_SIDEBAR_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + 2 * CINST.group_spacing + CINST.bytes_per_row)
 #define CHX_CURSOR_X (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((CINST.cursor.pos % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (CINST.cursor.pos % CINST.bytes_in_group) + CINST.cursor.sbpos + CINST.group_spacing)
 #define CHX_CURSOR_Y (int) ((CINST.cursor.pos - CINST.scroll_pos) / CINST.bytes_per_row + TPD)
+
+#define BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte) \
+	(byte & 0x80 ? '1' : '0'), \
+	(byte & 0x40 ? '1' : '0'), \
+	(byte & 0x20 ? '1' : '0'), \
+	(byte & 0x10 ? '1' : '0'), \
+	(byte & 0x08 ? '1' : '0'), \
+	(byte & 0x04 ? '1' : '0'), \
+	(byte & 0x02 ? '1' : '0'), \
+	(byte & 0x01 ? '1' : '0')
+
 #define WORD(X) *((uint16_t*) &X)
+#define INT8_AT(X, P) *((int8_t*) (X + P))
+#define INT16_AT(X, P) *((int16_t*) (X + P))
+#define INT32_AT(X, P) *((int32_t*) (X + P))
+#define INT64_AT(X, P) *((int64_t*) (X + P))
+#define UINT8_AT(X, P) *((uint8_t*) (X + P))
+#define UINT16_AT(X, P) *((uint16_t*) (X + P))
+#define UINT32_AT(X, P) *((uint32_t*) (X + P))
+#define UINT64_AT(X, P) *((uint64_t*) (X + P))
+#define WCHAR_AT(X, P) (wchar_t) *((int16_t*) (X + P))
 
 struct chx_command {
 	void (*execute)(void);
@@ -73,6 +97,7 @@ struct CHX_INSTANCE {
 	long scroll_pos;
 	long sel_start;
 	long sel_stop;
+	char endianness;
 	char selected;
 	char saved;
 	char mode;
@@ -94,6 +119,7 @@ char chx_get_char();
 void chx_print_status();
 void chx_draw_contents();
 void chx_draw_sidebar();
+void chx_draw_extra();
 void chx_redraw_line();
 
 void chx_main();
