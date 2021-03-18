@@ -165,7 +165,7 @@ void chx_to_start() {
 	CINST.cursor.pos = 0;
 	CINST.cursor.sbpos = 0;
 	CINST.scroll_pos = 0;
-	chx_draw_contents();
+	chx_draw_all();
 	fflush(stdout);
 }
 
@@ -174,7 +174,7 @@ void chx_to_end() {
 	CINST.cursor.sbpos = 1;
 	int new_scroll = (CINST.cursor.pos / CINST.bytes_per_row) - CINST.num_rows / 2;
 	CINST.scroll_pos = (new_scroll >= 0) ? new_scroll : 0;
-	chx_draw_contents();
+	chx_draw_all();
 	fflush(stdout);
 }
 
