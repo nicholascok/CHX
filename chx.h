@@ -11,6 +11,24 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 
+#define KEY_UP 		0x0141
+#define KEY_DOWN 	0x0142
+#define KEY_RIGHT 	0x0143
+#define KEY_LEFT 	0x0144
+
+#define KEY_DELETE 0x0133
+#define KEY_INSERT 0x0132
+#define KEY_PG_UP 0x0135
+#define KEY_PG_DN 0x0136
+#define KEY_HOME 0x0148
+#define KEY_END 0x0146
+
+#define KEY_ENTER 0x000A
+#define KEY_TAB 0x0009
+
+#define KEY_ESCAPE 	0x0100
+#define KEY_MAX_VAL 0x05FF
+
 #define CHX_MODE_DEFAULT 	0
 #define CHX_MODE_REPLACE 	1
 #define CHX_MODE_INSERT 	2
@@ -51,17 +69,6 @@
 #define CHX_CURSOR_X (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((CINST.cursor.pos % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (CINST.cursor.pos % CINST.bytes_in_group) + CINST.cursor.sbpos + CINST.group_spacing)
 #define CHX_CURSOR_Y (int) (CINST.cursor.pos / CINST.bytes_per_row - CINST.scroll_pos + TPD)
 #define CHX_GET_Y(X) (int) (X / CINST.bytes_per_row - CINST.scroll_pos + TPD)
-
-#define CHX_SHOW_PREVIEW
-#define CHX_SHOW_INSPECTOR
-
-#define CHX_PREVIEW_OFFSET CHX_CONTENT_END
-
-#ifdef CHX_SHOW_PREVIEW
-	#define CHX_INSPECTOR_OFFSET CHX_PREVIEW_END
-#else
-	#define CHX_INSPECTOR_OFFSET CHX_CONTENT_END
-#endif
 
 #define BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte) \

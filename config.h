@@ -1,25 +1,10 @@
-#define KEY_UP 		0x0141
-#define KEY_DOWN 	0x0142
-#define KEY_RIGHT 	0x0143
-#define KEY_LEFT 	0x0144
-
-#define KEY_DELETE 0x0133
-#define KEY_INSERT 0x0132
-#define KEY_PG_UP 0x0135
-#define KEY_PG_DN 0x0136
-#define KEY_HOME 0x0148
-#define KEY_END 0x0146
-
-#define KEY_ENTER 0x000A
-#define KEY_TAB 0x0009
-
-#define KEY_ESCAPE 	0x0100
-#define KEY_MAX_VAL 0x05FF
-
 #define CHX_CTRL(C) (C & 0x1F)
 #define CHX_ALT(C) ((C & 0x00FF) | 0x0300)
 #define CHX_SHIFT(C) ((C & 0x00FF) | 0x0200)
 #define CHX_CTRL_M(C) ((C & 0x00FF) | 0x0500)
+
+// GENERAL SETTINGS
+#define CHX_DEFAULT_ENDIANNESS CHX_LITTLE_ENDIAN
 
 // LAYOUT SETTINGS
 #define CHX_FRAME_COLOUR COLOUR_CYAN
@@ -32,7 +17,18 @@
 #define CHX_GROUP_SPACING 1
 #define CHX_ROW_NUM_LEN 8
 
-#define CHX_DEFAULT_ENDIANNESS CHX_LITTLE_ENDIAN
+// COMMENT TO DISABLE ELEMENTS
+#define CHX_SHOW_PREVIEW
+#define CHX_SHOW_INSPECTOR
+
+// DO NOT REMOVE
+#define CHX_PREVIEW_OFFSET CHX_CONTENT_END
+
+#ifdef CHX_SHOW_PREVIEW
+	#define CHX_INSPECTOR_OFFSET CHX_PREVIEW_END
+#else
+	#define CHX_INSPECTOR_OFFSET CHX_CONTENT_END
+#endif
 
 // GLOBAL KEYBINDS (WORK IN ANY MODE)
 void (*chx_keybinds_global[])(void) = {
@@ -62,6 +58,7 @@ void (*chx_keybinds_global[])(void) = {
 	[CHX_CTRL('x')] = chx_exit,
 	[CHX_CTRL('q')] = chx_exit,
 	[CHX_CTRL('z')] = chx_quit,
+	[KEY_DELETE] = chx_delete_hexchar,
 	['^'] = chx_to_line_start,
 	['$'] = chx_to_line_end,
 	[':'] = chx_prompt_command,
