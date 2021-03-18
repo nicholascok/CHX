@@ -110,6 +110,26 @@ void chx_draw_contents() {
 			printf("..");
 	}
 	
+	chx_draw_sidebar();
+	
+	// restore cursor position
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+}
+
+void chx_draw_sidebar() {
+	for (int i = CINST.scroll_pos; i < CINST.scroll_pos + CINST.num_bytes; i++) {
+		if (!(i % CINST.bytes_per_row))
+			cur_set(CHX_CONTENT_END, (int) (i - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
+		if (i < CINST.fdata.len) {
+			if (IS_PRINTABLE(CINST.fdata.data[i]))
+				printf("%c", CINST.fdata.data[i]);
+			else
+				printf("·");
+		} else
+			printf("•");
+	}
+	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
@@ -260,10 +280,10 @@ int main(int argc, char** argv) {
 	CINST.width = size.ws_col;
 	CINST.x_offset = 0;
 	CINST.y_offset = 0;
-	CINST.bytes_per_row = 16;
-	CINST.bytes_in_group = 1;
-	CINST.group_spacing = 1;
-	CINST.row_num_len = 8;
+	CINST.bytes_per_row = CHX_BYTES_PER_ROW;
+	CINST.bytes_in_group = CHX_BYTES_IN_GROUP;
+	CINST.group_spacing = CHX_GROUP_SPACING;
+	CINST.row_num_len = CHX_ROW_NUM_LEN;
 	CINST.num_rows = size.ws_row - PD;
 	CINST.num_bytes = CINST.num_rows * CINST.bytes_per_row;
 	CINST.saved = 1;

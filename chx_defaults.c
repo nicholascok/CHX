@@ -281,6 +281,7 @@ void chx_delete_selected() {
 				CINST.style_data[i / 8] |= 0x80 >> (i % 8);
 			}
 		CINST.cursor.pos = (sel_begin > 0) ? sel_begin - 1 : 0;
+		CINST.cursor.sbpos = 1;
 		chx_clear_selection();
 		chx_draw_contents();
 	}

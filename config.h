@@ -14,6 +14,13 @@
 #define CHX_CTRL(C) (C & 0x1F)
 #define CHX_ALT(C) ((C & 0x00FF) | 0x0100)
 
+// LAYOUT SETTINGS
+#define CHX_BYTES_PER_ROW 16
+#define CHX_BYTES_IN_GROUP 1
+#define CHX_GROUP_SPACING 1
+#define CHX_ROW_NUM_LEN 8
+
+// GLOBAL KEYBINDS (WORK IN ANY MODE)
 void (*chx_keybinds_global[])(void) = {
 	[KEY_MAX_VAL] = fvoid, // do not remove
 	[KEY_ESCAPE] = chx_mode_set_default,
@@ -36,6 +43,7 @@ void (*chx_keybinds_global[])(void) = {
 	[':'] = chx_prompt_command
 };
 
+// COMMAND MODE KEYBINDS
 void (*chx_keybinds_mode_command[])(void) = {
 	[KEY_MAX_VAL] = fvoid, // do not remove
 	['y'] = chx_copy,
@@ -49,6 +57,7 @@ void (*chx_keybinds_mode_command[])(void) = {
 	['e'] = chx_save_as
 };
 
+// INTERPRETER COMMANDS
 struct chx_command chx_commands[] = {
 	(struct chx_command) {chx_quit, "quit"},
 	(struct chx_command) {chx_quit, "save"},

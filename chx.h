@@ -22,12 +22,14 @@
 #define BPD 1
 #define PD (TPD + BPD)
 
+#define IS_PRINTABLE(C) (C > 0x20 && C < 0x7F)
 #define IS_LETTER(C) ((C ^ 0x40) < 26 || (C ^ 0x60) < 26)
 #define IS_CHAR_HEX(C) ((C ^ 0x40) < 7 || (C ^ 0x60) < 7 || (C ^ 0x30) < 10)
 #define IS_DIGIT(C) ((C ^ 0x30) < 10)
 
 #define CINST CHX_INSTANCES[CHX_SEL_INSTANCE]
 #define BETWEEN(X, A, B) (X >= min(A, B) && X <= max(A, B))
+#define CHX_CONTENT_END (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + CINST.group_spacing)
 #define CHX_CURSOR_X (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((CINST.cursor.pos % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (CINST.cursor.pos % CINST.bytes_in_group) + CINST.cursor.sbpos + CINST.group_spacing)
 #define CHX_CURSOR_Y (int) ((CINST.cursor.pos - CINST.scroll_pos) / CINST.bytes_per_row + TPD)
 #define WORD(X) *((uint16_t*) &X)
@@ -91,6 +93,7 @@ char chx_get_char();
 
 void chx_print_status();
 void chx_draw_contents();
+void chx_draw_sidebar();
 void chx_redraw_line();
 
 void chx_main();
