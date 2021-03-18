@@ -5,6 +5,10 @@
 struct chx_finfo chx_import(char* fpath) {
 	struct chx_finfo finfo;
 	FILE* inf = fopen(fpath, "r+b");
+	if (!inf) {
+		printf("file \"%s\" not found.\n", fpath);
+		exit(0);
+	}
 	fseek(inf, 0, SEEK_END);
 	long flen = ftell(inf);
 	rewind(inf);
@@ -22,8 +26,13 @@ void chx_export(char* fpath) {
 }
 
 void chx_redraw_line(int byte) {
+	// calculate line number
 	int line_start = (byte / CINST.bytes_per_row) * CINST.bytes_per_row;
-	printf("\e[1;34m\033[%d;0H%0*X \e[0m", (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD + 1, CINST.row_num_len, line_start);
+	
+	// print row number
+	printf("\e[1;34m\e[%d;0H%0*X \e[0m", (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD + 1, CINST.row_num_len, line_start);
+	
+	// print row contents
 	cur_set(CINST.row_num_len + CINST.group_spacing, (int) (byte - CINST.scroll_pos) / CINST.bytes_per_row + TPD);
 	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
 		if (i % CINST.bytes_per_row && !(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
@@ -38,16 +47,27 @@ void chx_redraw_line(int byte) {
 		} else
 			printf("..");
 	}
+	
+	// restore cursor position
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
 }
 
 void chx_print_status() {
+	// print current mode setting
 	cur_set(0, CINST.height);
 	switch (CINST.mode) {
 		case CHX_MODE_DEFAULT:
 			printf("\e[2K[ COMMAND ]");
 			break;
-		case CHX_MODE_TYPE_HEXCHAR:
-			printf("\e[2K[ INSERT HEX ]");
+		case CHX_MODE_INSERT:
+			printf("\e[2K[ INSERT ]");
+			break;
+		case CHX_MODE_REPLACE:
+			printf("\e[2K[ REPLACE ]");
+			break;
+		default:
+			printf("\e[2K[ UNKNOWN ]");
 			break;
 	}
 	
@@ -59,7 +79,7 @@ void chx_print_status() {
 
 void chx_draw_contents() {
 	// print header
-	printf("\033[0;0H%-*c\e[1;34m", CINST.row_num_len + CINST.group_spacing, ' ');
+	printf("\e[0;0H%-*c\e[1;34m", CINST.row_num_len + CINST.group_spacing, ' ');
 	if (CINST.group_spacing != 0)
 		for (int i = 0; i < CINST.bytes_per_row / CINST.bytes_in_group; i++)
 			printf("%02X%-*c", i * CINST.bytes_in_group, CINST.bytes_in_group * 2 + CINST.group_spacing - 2, ' ');
@@ -69,7 +89,7 @@ void chx_draw_contents() {
 	
 	// print row numbers
 	for (int i = 0; i < CINST.num_rows; i++)
-		printf("\033[%d;0H%0*lX", i + TPD + 1, CINST.row_num_len, i * CINST.bytes_per_row + CINST.scroll_pos);
+		printf("\e[%d;0H%0*lX", i + TPD + 1, CINST.row_num_len, i * CINST.bytes_per_row + CINST.scroll_pos);
 	
 	printf("\e[0m");
 	
@@ -92,7 +112,6 @@ void chx_draw_contents() {
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	
 	fflush(stdout);
 }
 
@@ -107,8 +126,8 @@ void chx_prompt_command() {
 	
 	fgets(usrin, 256, stdin);
 	
-	// cut input at first newline
-	usrin[strcspn(usrin, "\n")] = 0;
+	// null terminate input at first newline
+	str_terminate_at(usrin, '\n');
 	
 	// lookup entered command and execute procedure
 	for (int i = 0; chx_commands[i].str; i++)
@@ -137,9 +156,13 @@ void chx_main() {
 			case CHX_MODE_DEFAULT:
 				if (chx_keybinds_mode_command[WORD(key)]) chx_keybinds_mode_command[WORD(key)]();
 				break;
-			case CHX_MODE_TYPE_HEXCHAR:
+			case CHX_MODE_INSERT:
 				if (IS_CHAR_HEX(WORD(key))) chx_type_hexchar(WORD(key));
 				else if (WORD(key) == 0x7F) chx_backspace_hexchar();
+				break;
+			case CHX_MODE_REPLACE:
+				if (IS_CHAR_HEX(WORD(key))) chx_set_hexchar(WORD(key));
+				else if (WORD(key) == 0x7F) chx_delete_hexchar();
 				break;
 		}
 	}
@@ -203,9 +226,20 @@ char chx_get_char() {
 }
 
 int main(int argc, char** argv) {
-	// enter new terminal state
-	tenter();
-	cls();
+	// command-line interface
+	if (argc < 2) {
+		printf("no filepath specified: see chx --help for more information.\n");
+		return 0;
+	} else {
+		if (cmp_str(argv[1], "--help") || cmp_str(argv[1], "-help")) {
+			printf("usage: chx <filepath>\n");
+			return 0;
+		}
+		else if (cmp_str(argv[1], "-v") || cmp_str(argv[1], "--version")) {
+			printf("CAOIMH HEX EDITOR version 1.0.0\n");
+			return 0;
+		}
+	}
 	
 	// get window dimensions
 	struct winsize size;
@@ -214,6 +248,10 @@ int main(int argc, char** argv) {
 	// load file
 	struct chx_finfo hdata = chx_import(argv[1]);
 	hdata.filename = argv[1];
+	
+	// enter new terminal state
+	tenter();
+	cls();
 	
 	// setup initial instance
 	CINST.fdata = hdata;
@@ -241,4 +279,6 @@ int main(int argc, char** argv) {
 	
 	// restore terminal state
 	texit();
+	
+	return 0;
 }

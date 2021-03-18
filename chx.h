@@ -1,17 +1,17 @@
 #ifndef __CHX_CAOIMH__
 #define __CHX_CAOIMH__
 
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdint.h>
+#include <malloc.h>
 #include <unistd.h>
 #include <termios.h>
-#include <string.h>
 #include <sys/ioctl.h>
 
-#define CHX_MODE_DEFAULT 		0
-#define CHX_MODE_TYPE_DEFAULT 	1
-#define CHX_MODE_TYPE_HEXCHAR 	2
+#define CHX_MODE_DEFAULT 	0
+#define CHX_MODE_REPLACE 	1
+#define CHX_MODE_INSERT 	2
 
 #define tenter() system("tput smcup")
 #define texit() system("tput rmcup")

@@ -13,6 +13,9 @@ build:
 	@echo "building..."
 	$(CC) -o $(TARGET_DIR)/chx $(HEADERS) $(OBJS) $(CC_FLAGS)
 
+install:
+	sudo cp ./build/chx /usr/bin/
+
 clean:
 	@echo "cleaning build directory..."
 	rm -r ./build/*

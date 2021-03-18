@@ -1,6 +1,12 @@
-void chx_type_mode_toggle() {
-	if (CINST.mode == CHX_MODE_TYPE_HEXCHAR) CINST.mode = CHX_MODE_DEFAULT;
-	else CINST.mode = CHX_MODE_TYPE_HEXCHAR;
+void chx_insert_mode_toggle() {
+	if (CINST.mode == CHX_MODE_INSERT) CINST.mode = CHX_MODE_DEFAULT;
+	else CINST.mode = CHX_MODE_INSERT;
+	chx_print_status();
+}
+
+void chx_replace_mode_toggle() {
+	if (CINST.mode == CHX_MODE_REPLACE) CINST.mode = CHX_MODE_DEFAULT;
+	else CINST.mode = CHX_MODE_REPLACE;
 	chx_print_status();
 }
 
@@ -115,7 +121,7 @@ void chx_resize_file(long _n) {
 	CINST.fdata.len = _n;
 }
 
-void chx_type_hexchar(char _c) {
+void chx_set_hexchar(char _c) {
 	if (!IS_CHAR_HEX(_c)) return; // only accept hex characters
 	if ((_c ^ 0x60) < 7) _c -= 32; // ensure everything is upper-case
 	printf("\e[1;33m%c\e[0m", _c); // print the character on the screen
@@ -136,32 +142,45 @@ void chx_type_hexchar(char _c) {
 	CINST.saved = 0;
 	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
 	chx_redraw_line(CINST.cursor.pos);
-	
-	// move cursor after typing a char
+}
+
+void chx_type_hexchar(char _c) {
+	chx_set_hexchar(_c);
 	chx_cursor_move_right();
 }
 
 void chx_delete_hexchar() {
-	if (CINST.cursor.pos + 1 == CINST.fdata.len && !CINST.cursor.sbpos)
-		if (!(CINST.fdata.data[CINST.cursor.pos] & 0x0F))
-			chx_resize_file(CINST.fdata.len - 1);
-		else
-			CINST.fdata.data[CINST.cursor.pos] &= 0x0F;
-	else if (CINST.cursor.pos < CINST.fdata.len)
+	// only delete if cursor is before EOF
+	if (CINST.cursor.pos < CINST.fdata.len)
 		if (CINST.cursor.sbpos)
 			CINST.fdata.data[CINST.cursor.pos] &= 0xF0;
 		else
 			CINST.fdata.data[CINST.cursor.pos] &= 0x0F;
+	
+	// update screen
 	chx_redraw_line(CINST.cursor.pos);
 }
 
 void chx_backspace_hexchar() {
-	chx_delete_hexchar();
+	// if cursor is just after EOF, resize file to remove last byte
+	if (CINST.cursor.pos == CINST.fdata.len && !CINST.cursor.sbpos) {
+		chx_resize_file(CINST.fdata.len - 1);
+		chx_cursor_move_left();
+		chx_redraw_line(CINST.cursor.pos);
+	} else
+		chx_delete_hexchar();
+	
+	// move cursor after removing char
 	chx_cursor_move_left();
 }
 
 void chx_mode_set_insert() {
-	CINST.mode = CHX_MODE_TYPE_HEXCHAR;
+	CINST.mode = CHX_MODE_INSERT;
+	chx_print_status();
+}
+
+void chx_mode_set_replace() {
+	CINST.mode = CHX_MODE_REPLACE;
 	chx_print_status();
 }
 
@@ -186,6 +205,12 @@ char cmp_str(char* _a, char* _b) {
 	return 1;
 }
 
+void str_terminate_at(char* _s, char _c) {
+	int n = 0;
+	for (;_s[n] && _s[n] != _c; n++);
+	_s[n] = 0;
+}
+
 void chx_save_as() {
 	// setup user input buffer
 	char usrin[256];
@@ -197,8 +222,8 @@ void chx_save_as() {
 	
 	fgets(usrin, 256, stdin);
 	
-	// cut input at first newline
-	usrin[strcspn(usrin, "\n")] = 0;
+	// null terminate input at first newline
+	str_terminate_at(usrin, '\n');
 	
 	// only export if filename was entered
 	if (usrin[0]) {
@@ -209,7 +234,7 @@ void chx_save_as() {
 	}
 	
 	// erase save dialoge
-	printf("\033[1A\033[2K");
+	printf("\e[1A\e[2K");
 	fflush(stdout);
 	
 	// redraw contents
@@ -237,20 +262,39 @@ void chx_paste() {
 	chx_draw_contents();
 }
 
+void chx_clear_buffer() {
+	free(CINST.copy_buffer);
+	CINST.copy_buffer = 0;
+	CINST.copy_buffer_len = 0;
+}
+
 void chx_delete_selected() {
-	long sel_begin = min(CINST.sel_start, CINST.sel_stop);
-	long sel_end = max(CINST.sel_start, CINST.sel_stop);
-	CINST.saved = 0;
-	if (sel_end >= CINST.fdata.len - 1)
-		chx_resize_file(sel_begin);
-	else
-		for (int i = sel_begin; i < sel_end + 1; i++) {
-			CINST.fdata.data[i] = 0;
-			CINST.style_data[i / 8] |= 0x80 >> (i % 8);
-		}
-	CINST.cursor.pos = (sel_begin > 0) ? sel_begin - 1 : 0;
-	chx_clear_selection();
-	chx_draw_contents();
+	if (CINST.selected) {
+		long sel_begin = min(CINST.sel_start, CINST.sel_stop);
+		long sel_end = max(CINST.sel_start, CINST.sel_stop);
+		CINST.saved = 0;
+		if (sel_end >= CINST.fdata.len - 1)
+			chx_resize_file(sel_begin);
+		else
+			for (int i = sel_begin; i < sel_end + 1; i++) {
+				CINST.fdata.data[i] = 0;
+				CINST.style_data[i / 8] |= 0x80 >> (i % 8);
+			}
+		CINST.cursor.pos = (sel_begin > 0) ? sel_begin - 1 : 0;
+		chx_clear_selection();
+		chx_draw_contents();
+	}
+}
+
+void chx_save_and_quit() {
+	chx_export(CINST.fdata.filename);
+	texit();
+	exit(0);
+}
+
+void chx_exit() {
+	texit();
+	exit(0);
 }
 
 void chx_quit() {
