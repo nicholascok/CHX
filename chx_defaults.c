@@ -19,7 +19,6 @@ void chx_update_cursor() {
 void chx_swap_endianness() {
 	CINST.endianness = ! CINST.endianness;
 	chx_draw_extra();
-	fflush(stdout);
 }
 
 void chx_cursor_move_up() {
@@ -194,6 +193,16 @@ void chx_mode_set_replace() {
 void chx_mode_set_default() {
 	CINST.mode = CHX_MODE_DEFAULT;
 	chx_print_status();
+}
+
+void chx_revert() {
+	CINST.fdata = chx_import(CINST.fdata.filename);
+	CINST.saved = 1;
+	for (int i = 0; i < CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0); i++)
+		CINST.style_data[i] = 0;
+	
+	// redraw content to remove unsaved highlights
+	chx_draw_contents();
 }
 
 void chx_save() {

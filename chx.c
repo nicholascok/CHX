@@ -63,6 +63,7 @@ void chx_redraw_line(int byte) {
 		} else
 			printf("•");
 	}
+	printf("\e[0m");
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
@@ -94,33 +95,38 @@ void chx_print_status() {
 }
 
 void chx_draw_extra() {
-	cur_set(CHX_SIDEBAR_END, TPD);
-	printf("\e[1m");
-	printf("\e[0Kbinary: "BINARY_PATTERN, BYTE_TO_BINARY(CINST.fdata.data[CINST.cursor.pos]));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0Kint8: %i", INT8_AT(CINST.fdata.data, CINST.cursor.pos));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0Kint16: %i", (CINST.endianness) ? INT16_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_16 (INT16_AT(CINST.fdata.data, CINST.cursor.pos)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0Kint32: %i", (CINST.endianness) ? INT32_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_32 (INT32_AT(CINST.fdata.data, CINST.cursor.pos)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0Kint64: %li", (CINST.endianness) ? INT64_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_64 (INT64_AT(CINST.fdata.data, CINST.cursor.pos)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0Kuint8: %u", UINT8_AT(CINST.fdata.data, CINST.cursor.pos));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0Kuint16: %u", (CINST.endianness) ? UINT16_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_16 (UINT16_AT(CINST.fdata.data, CINST.cursor.pos)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0Kuint32: %u", (CINST.endianness) ? UINT32_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_32 (UINT32_AT(CINST.fdata.data, CINST.cursor.pos)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0Kuint64: %lu", (CINST.endianness) ? UINT64_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_64 (UINT64_AT(CINST.fdata.data, CINST.cursor.pos)));
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0KANSI char: %c", CINST.fdata.data[CINST.cursor.pos]);
-	printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
-	printf("\e[0Kwide char: %lc", WCHAR_AT(CINST.fdata.data, CINST.cursor.pos));
-	printf("\e[%dG\e[1B\e[0K\e[1B ", CHX_SIDEBAR_END);
-	if (CINST.endianness) printf("\e[0KLITTLE ENDIAN");
-	else printf("\e[0KBIG ENDIAN");
-	printf("\e[%dG\e[1B \e[0m", CHX_SIDEBAR_END);
+	if (CINST.cursor.pos < CINST.fdata.len) {
+		cur_set(CHX_SIDEBAR_END, TPD);
+		printf("\e[1m");
+		printf("\e[0Kbinary: "BINARY_PATTERN, BYTE_TO_BINARY(CINST.fdata.data[CINST.cursor.pos]));
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		printf("\e[0Kint8: %i", INT8_AT(CINST.fdata.data, CINST.cursor.pos));
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		printf("\e[0Kint16: %i", (CINST.endianness) ? INT16_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_16 (INT16_AT(CINST.fdata.data, CINST.cursor.pos)));
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		printf("\e[0Kint32: %i", (CINST.endianness) ? INT32_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_32 (INT32_AT(CINST.fdata.data, CINST.cursor.pos)));
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		printf("\e[0Kint64: %li", (CINST.endianness) ? INT64_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_64 (INT64_AT(CINST.fdata.data, CINST.cursor.pos)));
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		printf("\e[0Kuint8: %u", UINT8_AT(CINST.fdata.data, CINST.cursor.pos));
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		printf("\e[0Kuint16: %u", (CINST.endianness) ? UINT16_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_16 (UINT16_AT(CINST.fdata.data, CINST.cursor.pos)));
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		printf("\e[0Kuint32: %u", (CINST.endianness) ? UINT32_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_32 (UINT32_AT(CINST.fdata.data, CINST.cursor.pos)));
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		printf("\e[0Kuint64: %lu", (CINST.endianness) ? UINT64_AT(CINST.fdata.data, CINST.cursor.pos) : __bswap_64 (UINT64_AT(CINST.fdata.data, CINST.cursor.pos)));
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		if (IS_PRINTABLE(CINST.fdata.data[CINST.cursor.pos]))
+			printf("\e[0KANSI char: %c", CINST.fdata.data[CINST.cursor.pos]);
+		else
+			printf("\e[0KANSI char: \ufffd");
+		printf("\e[%dG\e[1B ", CHX_SIDEBAR_END);
+		printf("\e[0Kwide char: %lc", WCHAR_AT(CINST.fdata.data, CINST.cursor.pos));
+		printf("\e[%dG\e[1B\e[0K\e[1B ", CHX_SIDEBAR_END);
+		if (CINST.endianness) printf("\e[0K[LITTLE ENDIAN]");
+		else printf("\e[0K[BIG ENDIAN]");
+		printf("\e[%dG\e[1B\e[0K\e[0m", CHX_SIDEBAR_END);
+	}
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
@@ -163,10 +169,6 @@ void chx_draw_contents() {
 	
 	chx_draw_sidebar();
 	chx_draw_extra();
-	
-	// restore cursor position
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
 }
 
 void chx_draw_sidebar() {

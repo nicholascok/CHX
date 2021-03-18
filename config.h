@@ -39,6 +39,7 @@ void (*chx_keybinds_global[])(void) = {
 	[CHX_CTRL('e')] = chx_swap_endianness,
 	[CHX_CTRL('w')] = chx_save,
 	[CHX_CTRL('r')] = chx_save_as,
+	[CHX_CTRL('u')] = chx_revert,
 	[CHX_CTRL('x')] = chx_exit,
 	[CHX_CTRL('q')] = chx_quit,
 	[':'] = chx_prompt_command
