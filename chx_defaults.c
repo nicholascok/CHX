@@ -358,11 +358,8 @@ void chx_save_as() {
 			CINST.style_data[i] = 0;
 	}
 	
-	// erase save dialoge
-	printf("\e[1A\e[2K");
-	fflush(stdout);
-	
 	// redraw elements
+	cls();
 	chx_draw_all();
 }
 
@@ -479,7 +476,7 @@ void chx_quit() {
 				break;
 			default:
 				// erase save dialoge and redraw elements
-				printf("\e[1A\e[2K");
+				cls();
 				chx_draw_all();
 				chx_main();
 				break;

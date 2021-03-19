@@ -279,6 +279,7 @@ void chx_prompt_command() {
 	}
 	
 	// redraw elements
+	cls();
 	chx_draw_all();
 }
 
