@@ -116,7 +116,8 @@ void chx_cursor_select_right() {
 }
 
 void chx_cursor_select_left() {
-	if (!CINST.selected) chx_start_selection();
+	if (CINST.cursor.pos || CINST.cursor.sbpos)
+		if (!CINST.selected) chx_start_selection();
 	chx_cursor_move_left();
 	CINST.sel_stop = CINST.cursor.pos;
 	chx_draw_contents();

@@ -26,16 +26,18 @@ void chx_export(char* fpath) {
 }
 
 void chx_update_cursor() {
-	// stop cursor at 0;
-	CINST.cursor.pos *= (CINST.cursor.pos >= 0);
-	
-	// scroll if pasting outside of visible screen
-	if (CINST.cursor.pos > (CINST.scroll_pos - 1) * CINST.bytes_per_row + CINST.num_bytes) {
-		CINST.scroll_pos = (CINST.cursor.pos - CINST.num_bytes) / CINST.bytes_per_row + 1;
-		chx_draw_contents();
-	} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
-		CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
-		chx_draw_contents();
+	if (CINST.cursor.pos >= 0) {
+		// scroll if pasting outside of visible screen
+		if (CINST.cursor.pos > (CINST.scroll_pos - 1) * CINST.bytes_per_row + CINST.num_bytes) {
+			CINST.scroll_pos = (CINST.cursor.pos - CINST.num_bytes) / CINST.bytes_per_row + 1;
+			chx_draw_contents();
+		} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
+			CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
+			chx_draw_contents();
+		}
+	} else {
+		CINST.cursor.sbpos = 0;
+		CINST.cursor.pos = 0;
 	}
 	
 	// redraw cursor

@@ -27,7 +27,7 @@
 #define KEY_TAB 0x0009
 
 #define KEY_ESCAPE 	0x0100
-#define KEY_MAX_VAL 0x05FF
+#define KEY_MAX_VAL 0xFFFF
 
 #define CHX_MODE_DEFAULT 	0
 #define CHX_MODE_REPLACE 	1
