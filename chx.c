@@ -261,12 +261,12 @@ void chx_prompt_command() {
 	// lookup entered command and execute procedure
 	if (usrin[0]) {
 		if (str_is_num(usrin)) {
-			CINST.cursor.pos = str_to_num(usrin) - 1;
+			CINST.cursor.pos = str_to_num(usrin);
 			CINST.cursor.sbpos = 0;
 			chx_update_cursor();
 			chx_draw_all();
 		} else if (WORD(usrin) == 0x7830 && str_is_hex(usrin + 2)) {
-			CINST.cursor.pos = str_to_hex(usrin + 2) - 1;
+			CINST.cursor.pos = str_to_hex(usrin + 2);
 			CINST.cursor.sbpos = 0;
 			chx_update_cursor();
 			chx_draw_all();

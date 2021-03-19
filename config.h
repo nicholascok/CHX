@@ -103,6 +103,7 @@ struct chx_command chx_commands[] = {
 	(struct chx_command) {chx_quit, "q"},
 	(struct chx_command) {chx_save_and_quit, "wq"},
 	(struct chx_command) {chx_save_and_quit, "x"},
+	(struct chx_command) {chx_to_start, "0"},
 	(struct chx_command) {0, 0} // do not remove
 };
 
