@@ -3,10 +3,10 @@
 #define CHX_SHIFT(C) ((C & 0x00FF) | 0x0200)
 #define CHX_CTRL_M(C) ((C & 0x00FF) | 0x0500)
 
-// GENERAL SETTINGS
+/* GENERAL SETTINGS */
 #define CHX_DEFAULT_ENDIANNESS CHX_LITTLE_ENDIAN
 
-// LAYOUT SETTINGS
+/* LAYOUT SETTINGS */
 #define CHX_FRAME_COLOUR COLOUR_CYAN
 #define CHX_UNSAVED_COLOUR "\033[38;2;0;240;240m"
 #define CHX_ASCII_SELECT_COLOUR FORMAT_UNDERLINE
@@ -17,20 +17,13 @@
 #define CHX_GROUP_SPACING 1
 #define CHX_ROW_NUM_LEN 8
 
-// COMMENT TO DISABLE ELEMENTS
+/* FEATURES (COMMENT TO DISABLE) */
+#define CHX_RESIZE_FILE_ON_BACKSPACE
+#define CHX_RESIZE_FILE_ON_INSERTION
 #define CHX_SHOW_PREVIEW
 #define CHX_SHOW_INSPECTOR
 
-// DO NOT REMOVE
-#define CHX_PREVIEW_OFFSET CHX_CONTENT_END
-
-#ifdef CHX_SHOW_PREVIEW
-	#define CHX_INSPECTOR_OFFSET CHX_PREVIEW_END
-#else
-	#define CHX_INSPECTOR_OFFSET CHX_CONTENT_END
-#endif
-
-// GLOBAL KEYBINDS (WORK IN ANY MODE)
+/* GLOBAL KEYBINDS (WORK IN ANY MODE) */
 void (*chx_keybinds_global[])(void) = {
 	[KEY_MAX_VAL] = fvoid, // do not remove
 	[KEY_ESCAPE] = chx_mode_set_default,
@@ -53,6 +46,7 @@ void (*chx_keybinds_global[])(void) = {
 	[CHX_CTRL('y')] = chx_copy,
 	[CHX_CTRL('p')] = chx_paste_after,
 	[CHX_CTRL('P')] = chx_paste_before,
+	[CHX_CTRL('t')] = chx_type_mode_toggle,
 	[CHX_CTRL('i')] = chx_insert_mode_toggle,
 	[CHX_CTRL('r')] = chx_replace_mode_toggle,
 	[CHX_CTRL('e')] = chx_swap_endianness,
@@ -68,7 +62,7 @@ void (*chx_keybinds_global[])(void) = {
 	[':'] = chx_prompt_command,
 };
 
-// COMMAND MODE KEYBINDS
+/* COMMAND MODE KEYBINDS */
 void (*chx_keybinds_mode_command[])(void) = {
 	[KEY_MAX_VAL] = fvoid, // do not remove
 	['k'] = chx_cursor_move_up,
@@ -79,12 +73,22 @@ void (*chx_keybinds_mode_command[])(void) = {
 	['J'] = chx_cursor_select_down,
 	['L'] = chx_cursor_select_right,
 	['H'] = chx_cursor_select_left,
+	[CHX_CTRL('k')] = chx_cursor_move_up_by_5,
+	[CHX_CTRL('j')] = chx_cursor_move_down_by_5,
+	[CHX_CTRL('l')] = chx_cursor_move_right_by_5,
+	[CHX_CTRL('h')] = chx_cursor_move_left_by_5,
+	[CHX_ALT('k')] = chx_cursor_move_up,
+	[CHX_ALT('j')] = chx_cursor_move_down,
+	[CHX_ALT('l')] = chx_cursor_next_byte,
+	[CHX_ALT('h')] = chx_cursor_prev_byte,
 	['u'] = chx_revert,
 	['y'] = chx_copy,
 	['P'] = chx_paste_before,
 	['p'] = chx_paste_after,
+	['D'] = chx_remove_selected,
 	['d'] = chx_delete_selected,
 	['x'] = chx_delete_hexchar,
+	['t'] = chx_mode_set_type,
 	['i'] = chx_mode_set_insert,
 	['r'] = chx_mode_set_replace,
 	['g'] = chx_to_start,
@@ -93,7 +97,7 @@ void (*chx_keybinds_mode_command[])(void) = {
 	['.'] = chx_execute_last_action,
 };
 
-// INTERPRETER COMMANDS
+/* INTERPRETER COMMANDS */
 struct chx_command chx_commands[] = {
 	(struct chx_command) {chx_swap_endianness, "se"},
 	(struct chx_command) {chx_save, "w"},
@@ -107,7 +111,7 @@ struct chx_command chx_commands[] = {
 	(struct chx_command) {0, 0} // do not remove
 };
 
-// FUNCTIONS TO EXCLUDE FROM ACTION HISTORY
+/* FUNCTIONS TO EXCLUDE FROM ACTION HISTORY */
 void (*func_exceptions[])(void) = {
 	chx_cursor_move_up,
 	chx_cursor_move_down,

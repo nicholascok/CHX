@@ -32,6 +32,7 @@
 #define CHX_MODE_DEFAULT 	0
 #define CHX_MODE_REPLACE 	1
 #define CHX_MODE_INSERT 	2
+#define CHX_MODE_TYPE 		3
 
 #define tenter() system("tput smcup")
 #define texit() system("tput rmcup")
@@ -132,6 +133,7 @@ struct CHX_INSTANCE {
 	long scroll_pos;
 	long sel_start;
 	long sel_stop;
+	char parity;
 	char endianness;
 	char selected;
 	char saved;
@@ -165,6 +167,13 @@ void chx_draw_sidebar();
 void chx_draw_extra();
 void chx_draw_all();
 void chx_redraw_line();
+
+void chx_set_hexchar(char _c);
+void chx_type_hexchar(char _c);
+void chx_insert_hexchar(char _c);
+void chx_delete_hexchar();
+void chx_backspace_hexchar();
+void chx_remove_hexchar();
 
 void chx_main();
 

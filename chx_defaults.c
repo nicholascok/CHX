@@ -1,6 +1,17 @@
+void chx_type_mode_toggle() {
+	if (CINST.mode == CHX_MODE_TYPE) CINST.mode = CHX_MODE_DEFAULT;
+	else CINST.mode = CHX_MODE_TYPE;
+	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+}
+
 void chx_insert_mode_toggle() {
 	if (CINST.mode == CHX_MODE_INSERT) CINST.mode = CHX_MODE_DEFAULT;
-	else CINST.mode = CHX_MODE_INSERT;
+	else {
+		CINST.mode = CHX_MODE_INSERT;
+		CINST.parity = 1;
+	}
 	chx_print_status();
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
@@ -206,75 +217,16 @@ void chx_to_end() {
 	chx_draw_all();
 }
 
-void chx_set_hexchar(char _c) {
-	if (!IS_CHAR_HEX(_c)) return; // only accept hex characters
-	if ((_c ^ 0x60) < 7) _c -= 32; // ensure everything is upper-case
-	printf("\e[31m%c\e[0m", _c); // print the character on the screen
-	
-	char nullkey[2] = {_c, 0};
-	
-	// resize file if typing past current file length
-	if (CINST.cursor.pos >= CINST.fdata.len) {
-		chx_resize_file(CINST.cursor.pos + 1);
-		chx_draw_contents();
-	}
-	
-	// update stored file data
-	CINST.fdata.data[CINST.cursor.pos] &= 0x0F << (CINST.cursor.sbpos * 4);
-	CINST.fdata.data[CINST.cursor.pos] |= strtol(nullkey, NULL, 16) << (!CINST.cursor.sbpos * 4);
-	
-	// highlight unsaved changes
-	CINST.saved = 0;
-	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
-	chx_redraw_line(CINST.cursor.pos);
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
-}
-
-void chx_type_hexchar(char _c) {
-	chx_set_hexchar(_c);
-	chx_cursor_move_right();
-}
-
-void chx_delete_hexchar() {
-	CINST.saved = 0;
-	
-	// only delete if cursor is before EOF
-	if (CINST.cursor.pos < CINST.fdata.len)
-		if (CINST.cursor.sbpos)
-			CINST.fdata.data[CINST.cursor.pos] &= 0xF0;
-		else
-			CINST.fdata.data[CINST.cursor.pos] &= 0x0F;
-	
-	// hightlight as unsaved change
-	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
-	
-	// update screen
-	chx_redraw_line(CINST.cursor.pos);
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
-}
-
-void chx_backspace_hexchar() {
-	CINST.saved = 0;
-	
-	// if cursor is just after EOF, resize file to remove last byte
-	if (CINST.cursor.pos == CINST.fdata.len && !CINST.cursor.sbpos) {
-		chx_resize_file(CINST.fdata.len - 1);
-		CINST.cursor.pos--;
-		CINST.cursor.sbpos = 1;
-	} else
-		chx_delete_hexchar();
-	
-	// move cursor after removing char
-	chx_cursor_move_left();
-	chx_redraw_line(CINST.cursor.pos);
+void chx_mode_set_type() {
+	CINST.mode = CHX_MODE_TYPE;
+	chx_print_status();
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
 
 void chx_mode_set_insert() {
 	CINST.mode = CHX_MODE_INSERT;
+	CINST.parity = 1;
 	chx_print_status();
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
@@ -428,6 +380,26 @@ void chx_clear_buffer() {
 	free(CINST.copy_buffer);
 	CINST.copy_buffer = 0;
 	CINST.copy_buffer_len = 0;
+}
+
+void chx_remove_selected() {
+	if (CINST.selected) {
+		long sel_begin = min(CINST.sel_start, CINST.sel_stop);
+		long sel_end = max(CINST.sel_start, CINST.sel_stop);
+		long sel_size = sel_end - sel_begin + 1;
+		CINST.saved = 0;
+		if (sel_end > CINST.fdata.len - 1)
+			chx_resize_file(sel_begin);
+		else {
+			for (int i = sel_end + 1; i < CINST.fdata.len; i++)
+				CINST.fdata.data[i - sel_size] = CINST.fdata.data[i];
+			chx_resize_file(CINST.fdata.len - sel_size);
+		}
+		CINST.cursor.pos = (sel_begin > 0) ? sel_begin - 1 : 0;
+		CINST.cursor.sbpos = 1;
+		chx_clear_selection();
+		chx_draw_all();
+	}
 }
 
 void chx_delete_selected() {
