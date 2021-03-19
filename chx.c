@@ -403,13 +403,15 @@ void chx_remove_hexchar() {
 			unsigned char cr = 0;
 			CINST.saved = 0;
 			
-			// move cursor and delete char
+			// move cursor
 			chx_cursor_move_left();
-			chx_delete_hexchar();
 			
 			// shift data after cursor by 4 bits
 			if (!CINST.cursor.sbpos)
 				CINST.fdata.data[CINST.cursor.pos] <<= 4;
+			else
+				CINST.fdata.data[CINST.cursor.pos] &= 0xF0;
+			
 			for (int i = CINST.cursor.pos; i < CINST.fdata.len - 1; i++) {
 				cr = CINST.fdata.data[i + 1] & 0xF0;
 				CINST.fdata.data[i] |= cr >> 4;
