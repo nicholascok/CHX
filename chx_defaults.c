@@ -8,10 +8,7 @@ void chx_type_mode_toggle() {
 
 void chx_insert_mode_toggle() {
 	if (CINST.mode == CHX_MODE_INSERT) CINST.mode = CHX_MODE_DEFAULT;
-	else {
-		CINST.mode = CHX_MODE_INSERT;
-		CINST.parity = 1;
-	}
+	else CINST.mode = CHX_MODE_INSERT;
 	chx_print_status();
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
@@ -20,6 +17,30 @@ void chx_insert_mode_toggle() {
 void chx_replace_mode_toggle() {
 	if (CINST.mode == CHX_MODE_REPLACE) CINST.mode = CHX_MODE_DEFAULT;
 	else CINST.mode = CHX_MODE_REPLACE;
+	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+}
+
+void chx_type_ascii_mode_toggle() {
+	if (CINST.mode == CHX_MODE_TYPE_ASCII) CINST.mode = CHX_MODE_DEFAULT;
+	else CINST.mode = CHX_MODE_TYPE_ASCII;
+	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+}
+
+void chx_insert_ascii_mode_toggle() {
+	if (CINST.mode == CHX_MODE_INSERT_ASCII) CINST.mode = CHX_MODE_DEFAULT;
+	else CINST.mode = CHX_MODE_INSERT_ASCII;
+	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+}
+
+void chx_replace_ascii_mode_toggle() {
+	if (CINST.mode == CHX_MODE_REPLACE_ASCII) CINST.mode = CHX_MODE_DEFAULT;
+	else CINST.mode = CHX_MODE_REPLACE_ASCII;
 	chx_print_status();
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
@@ -186,7 +207,7 @@ int str_to_hex(char* _s) {
 
 void chx_resize_file(long _n) {
 	CINST.fdata.data = recalloc(CINST.fdata.data, CINST.fdata.len, _n);
-	CINST.style_data = recalloc(CINST.style_data, CINST.fdata.len / 8 + 1, (_n) / 8 + 1);
+	CINST.style_data = recalloc(CINST.style_data, (CINST.fdata.len - 1) / 8 + 1, _n / 8 + 1);
 	CINST.fdata.len = _n;
 }
 
@@ -226,7 +247,6 @@ void chx_mode_set_type() {
 
 void chx_mode_set_insert() {
 	CINST.mode = CHX_MODE_INSERT;
-	CINST.parity = 1;
 	chx_print_status();
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
@@ -234,6 +254,27 @@ void chx_mode_set_insert() {
 
 void chx_mode_set_replace() {
 	CINST.mode = CHX_MODE_REPLACE;
+	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+}
+
+void chx_mode_set_type_ascii() {
+	CINST.mode = CHX_MODE_TYPE_ASCII;
+	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+}
+
+void chx_mode_set_insert_ascii() {
+	CINST.mode = CHX_MODE_INSERT_ASCII;
+	chx_print_status();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+}
+
+void chx_mode_set_replace_ascii() {
+	CINST.mode = CHX_MODE_REPLACE_ASCII;
 	chx_print_status();
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);

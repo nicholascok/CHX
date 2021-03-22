@@ -29,10 +29,13 @@
 #define KEY_ESCAPE 	0x0100
 #define KEY_MAX_VAL 0xFFFF
 
-#define CHX_MODE_DEFAULT 	0
-#define CHX_MODE_REPLACE 	1
-#define CHX_MODE_INSERT 	2
-#define CHX_MODE_TYPE 		3
+#define CHX_MODE_DEFAULT		0
+#define CHX_MODE_REPLACE		1
+#define CHX_MODE_INSERT			2
+#define CHX_MODE_TYPE			3
+#define CHX_MODE_REPLACE_ASCII	4
+#define CHX_MODE_INSERT_ASCII	5
+#define CHX_MODE_TYPE_ASCII		6
 
 #define tenter() system("tput smcup")
 #define texit() system("tput rmcup")
@@ -174,6 +177,7 @@ void chx_insert_hexchar(char _c);
 void chx_delete_hexchar();
 void chx_backspace_hexchar();
 void chx_remove_hexchar();
+void chx_erase_hexchar();
 
 void chx_main();
 
