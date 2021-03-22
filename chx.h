@@ -179,6 +179,14 @@ void chx_backspace_hexchar();
 void chx_remove_hexchar();
 void chx_erase_hexchar();
 
+void chx_set_ascii(char _c);
+void chx_type_ascii(char _c);
+void chx_insert_ascii(char _c);
+void chx_delete_ascii();
+void chx_backspace_ascii();
+void chx_remove_ascii();
+void chx_erase_ascii();
+
 void chx_main();
 
 #endif
