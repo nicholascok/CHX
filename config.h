@@ -5,6 +5,8 @@
 
 /* GENERAL SETTINGS */
 #define CHX_DEFAULT_ENDIANNESS CHX_LITTLE_ENDIAN
+#define CHX_SHOW_PREVIEW_ON_STARTUP TRUE // can be overridden if screen is small
+#define CHX_SHOW_INSPECTOR_ON_STARTUP TRUE // can be overridden if screen is small
 
 /* LAYOUT SETTINGS */
 #define CHX_FRAME_COLOUR COLOUR_CYAN
@@ -20,8 +22,6 @@
 /* FEATURES (COMMENT TO DISABLE) */
 #define CHX_RESIZE_FILE_ON_BACKSPACE
 #define CHX_RESIZE_FILE_ON_INSERTION
-#define CHX_SHOW_PREVIEW
-#define CHX_SHOW_INSPECTOR
 
 /* GLOBAL KEYBINDS (WORK IN ANY MODE) */
 void (*chx_keybinds_global[])(void) = {
@@ -105,6 +105,8 @@ void (*chx_keybinds_mode_command[])(void) = {
 
 /* INTERPRETER COMMANDS */
 struct chx_command chx_commands[] = {
+	(struct chx_command) {chx_toggle_inspector, "ti"},
+	(struct chx_command) {chx_toggle_preview, "tp"},
 	(struct chx_command) {chx_swap_endianness, "se"},
 	(struct chx_command) {chx_save, "w"},
 	(struct chx_command) {chx_save_as, "saveas"},

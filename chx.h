@@ -11,6 +11,9 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 
+#define TRUE 1
+#define FALSE 0
+
 #define KEY_UP 		0x0141
 #define KEY_DOWN 	0x0142
 #define KEY_RIGHT 	0x0143
@@ -72,6 +75,7 @@
 #define CHX_PREVIEW_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + 2 * CINST.group_spacing + CINST.bytes_per_row)
 #define CHX_CURSOR_X (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((CINST.cursor.pos % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (CINST.cursor.pos % CINST.bytes_in_group) + CINST.cursor.sbpos + CINST.group_spacing)
 #define CHX_CURSOR_Y (int) (CINST.cursor.pos / CINST.bytes_per_row - CINST.scroll_pos + TPD)
+#define CHX_GET_X(X) (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((X % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (X % CINST.bytes_in_group) + CINST.group_spacing)
 #define CHX_GET_Y(X) (int) (X / CINST.bytes_per_row - CINST.scroll_pos + TPD)
 
 #define BINARY_PATTERN "%c%c%c%c%c%c%c%c"
@@ -131,7 +135,6 @@ struct CHX_INSTANCE {
 	int width;
 	int x_offset;
 	int y_offset;
-	int num_bytes;
 	int num_rows;
 	long scroll_pos;
 	long sel_start;
@@ -141,7 +144,8 @@ struct CHX_INSTANCE {
 	char selected;
 	char saved;
 	char mode;
-	char show_extra;
+	char show_inspector;
+	char show_preview;
 };
 
 struct CHX_INSTANCE CHX_INSTANCES[8];

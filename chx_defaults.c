@@ -184,7 +184,8 @@ char str_is_num(char* _s) {
 }
 
 char str_is_hex(char* _s) {
-	for (int i = 0; _s[i]; i++) if (!IS_CHAR_HEX(_s[i])) return 0;
+	if (!(_s[0] == '0' && _s[1] == 'x')) return 0;
+	for (int i = 2; _s[i]; i++) if (!IS_CHAR_HEX(_s[i])) return 0;
 	return 1;
 }
 
@@ -197,7 +198,7 @@ int str_to_num(char* _s) {
 
 int str_to_hex(char* _s) {
 	int total = 0;
-	for (int i = 0; _s[i]; i++) {
+	for (int i = 2; _s[i]; i++) {
 		total *= 16;
 		if ((_s[i] ^ 0x60) < 7) _s[i] -= 32;
 		total += (_s[i] > 0x40) ? _s[i] - 0x37 : _s[i] - 0x30;
@@ -235,6 +236,16 @@ void chx_to_end() {
 	CINST.cursor.sbpos = 1;
 	int new_scroll = (CINST.cursor.pos / CINST.bytes_per_row) - CINST.num_rows / 2;
 	CINST.scroll_pos = (new_scroll >= 0) ? new_scroll : 0;
+	chx_draw_all();
+}
+
+void chx_toggle_inspector() {
+	CINST.show_inspector = !CINST.show_inspector;
+	chx_draw_all();
+}
+
+void chx_toggle_preview() {
+	CINST.show_preview = !CINST.show_preview;
 	chx_draw_all();
 }
 
@@ -321,10 +332,19 @@ char cmp_str(char* _a, char* _b) {
 	return 1;
 }
 
-void str_terminate_at(char* _s, char _c) {
-	int n = 0;
-	for (;_s[n] && _s[n] != _c; n++);
-	_s[n] = 0;
+char* chx_extract_param(char* _s, int _n) {
+	int n;
+	// extract param
+	char* param = _s;
+	for (int i = 0; i < _n; i++) {
+		for (n = 0; param[n] > 0x20 && param[n] < 0x7F; n++);
+		param += n + 1;
+	}
+	
+	// terminate param at first non-typable char or space (' ', '\n', '\t', etc.)
+	for (n = 0; param[n] > 0x20 && param[n] < 0x7F; n++);
+	param[n] = 0;
+	return param;
 }
 
 void chx_save_as() {
@@ -341,11 +361,11 @@ void chx_save_as() {
 	fgets(usrin, 256, stdin);
 	
 	// null terminate input at first newline
-	str_terminate_at(usrin, '\n');
+	char* filename = chx_extract_param(usrin, 0);
 	
 	// only export if filename was entered
-	if (usrin[0]) {
-		chx_export(usrin);
+	if (filename[0]) {
+		chx_export(filename);
 		CINST.saved = 1;
 		for (int i = 0; i < CINST.fdata.len / 8; i++)
 			CINST.style_data[i] = 0;
@@ -397,8 +417,8 @@ void chx_paste_after() {
 	CINST.saved = 0;
 	
 	// scroll if pasting past visible screen
-	if (CINST.cursor.pos + CINST.copy_buffer_len > CINST.scroll_pos * CINST.bytes_per_row + CINST.num_bytes)
-		CINST.scroll_pos = (CINST.cursor.pos + CINST.copy_buffer_len - CINST.num_bytes) / CINST.bytes_per_row + 1;
+	if (CINST.cursor.pos + CINST.copy_buffer_len > CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row)
+		CINST.scroll_pos = (CINST.cursor.pos + CINST.copy_buffer_len - CINST.num_rows * CINST.bytes_per_row) / CINST.bytes_per_row + 1;
 	
 	// resize file if pasting past end
 	if (CINST.cursor.pos + CINST.copy_buffer_len > CINST.fdata.len)

@@ -2,14 +2,6 @@
 #include "chx_defaults.c"
 #include "config.h"
 
-#define CHX_PREVIEW_OFFSET CHX_CONTENT_END
-
-#ifdef CHX_SHOW_PREVIEW
-	#define CHX_INSPECTOR_OFFSET CHX_PREVIEW_END
-#else
-	#define CHX_INSPECTOR_OFFSET CHX_CONTENT_END
-#endif
-
 struct chx_finfo chx_import(char* fpath) {
 	struct chx_finfo finfo;
 	FILE* inf = fopen(fpath, "r+b");
@@ -36,8 +28,8 @@ void chx_export(char* fpath) {
 void chx_update_cursor() {
 	if (CINST.cursor.pos >= 0) {
 		// scroll if pasting outside of visible screen
-		if (CINST.cursor.pos > (CINST.scroll_pos - 1) * CINST.bytes_per_row + CINST.num_bytes) {
-			CINST.scroll_pos = (CINST.cursor.pos - CINST.num_bytes) / CINST.bytes_per_row + 1;
+		if (CINST.cursor.pos > (CINST.scroll_pos - 1) * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row) {
+			CINST.scroll_pos = (CINST.cursor.pos - CINST.num_rows * CINST.bytes_per_row) / CINST.bytes_per_row + 1;
 			chx_draw_contents();
 		} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
 			CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
@@ -49,13 +41,11 @@ void chx_update_cursor() {
 	}
 	
 	// redraw cursor
-	#ifdef CHX_SHOW_INSPECTOR
+	if (CINST.show_inspector)
 		chx_draw_extra();
-	#endif
 	
-	#ifdef CHX_SHOW_PREVIEW
+	if (CINST.show_preview)
 		chx_draw_sidebar();
-	#endif
 	
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
@@ -63,11 +53,11 @@ void chx_update_cursor() {
 
 void chx_swap_endianness() {
 	CINST.endianness = !CINST.endianness;
-	#ifdef CHX_SHOW_INSPECTOR
+	if (CINST.show_inspector) {
 		chx_draw_extra();
 		cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 		fflush(stdout);
-	#endif
+	}
 }
 
 void chx_redraw_line(int byte) {
@@ -94,7 +84,7 @@ void chx_redraw_line(int byte) {
 	}
 	
 	// draw ascii preview
-	cur_set(CHX_PREVIEW_OFFSET, CHX_GET_Y(byte));
+	cur_set(CHX_CONTENT_END, CHX_GET_Y(byte));
 	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
 		if (i == CINST.cursor.pos)
 			printf(CHX_ASCII_SELECT_COLOUR);
@@ -154,50 +144,50 @@ void chx_draw_extra() {
 		else
 			buf[i] = 0;
 	
+	int offset = (CINST.show_preview) ? CHX_PREVIEW_END : CHX_CONTENT_END;
+	
 	// print inspected data
-	cur_set(CHX_INSPECTOR_OFFSET, 0);
+	cur_set(offset, 0);
 	printf("\e[1m");
 	printf("\e[0KData Inspector:");
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kbinary: "BINARY_PATTERN, BYTE_TO_BINARY(buf[0]));
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kint8: %i", INT8_AT(&buf));
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kint16: %i", (CINST.endianness) ? INT16_AT(&buf) : __bswap_16 (INT16_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kint32: %i", (CINST.endianness) ? INT32_AT(&buf) : __bswap_32 (INT32_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kint64: %li", (CINST.endianness) ? INT64_AT(&buf) : __bswap_64 (INT64_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kuint8: %u", UINT8_AT(&buf));
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kuint16: %u", (CINST.endianness) ? UINT16_AT(&buf) : __bswap_16 (UINT16_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kuint32: %u", (CINST.endianness) ? UINT32_AT(&buf) : __bswap_32 (UINT32_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kuint64: %lu", (CINST.endianness) ? UINT64_AT(&buf) : __bswap_64 (UINT64_AT(&buf)));
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	if (IS_PRINTABLE(buf[0]))
 		printf("\e[0KANSI char: %c", buf[0]);
 	else
 		printf("\e[0KANSI char: \ufffd");
-	printf("\e[%dG\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B ", offset);
 	printf("\e[0Kwide char: %lc", (CINST.endianness) ? WCHAR_AT(&buf) : __bswap_16 (WCHAR_AT(&buf)));
-	printf("\e[%dG\e[1B\e[0K\e[1B ", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B\e[0K\e[1B ", offset);
 	if (CINST.endianness) printf("\e[0K[LITTLE ENDIAN]");
 	else printf("\e[0K[BIG ENDIAN]");
-	printf("\e[%dG\e[1B\e[0K\e[0m", CHX_INSPECTOR_OFFSET);
+	printf("\e[%dG\e[1B\e[0K\e[0m", offset);
 }
 
 void chx_draw_all() {
 	// draw elements
-	#ifdef CHX_SHOW_PREVIEW
+	if (CINST.show_preview)
 		chx_draw_sidebar();
-	#endif
 	
-	#ifdef CHX_SHOW_INSPECTOR
+	if (CINST.show_inspector)
 		chx_draw_extra();
-	#endif
 	
 	chx_draw_contents();
 	chx_print_status();
@@ -224,7 +214,7 @@ void chx_draw_contents() {
 	printf("\e[0m");
 	
 	// print main contents
-	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_bytes; i++) {
+	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
 		if (!(i % CINST.bytes_per_row))
 			cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(i));
 		else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
@@ -242,15 +232,15 @@ void chx_draw_contents() {
 }
 
 void chx_draw_sidebar() {
-	cur_set(CHX_PREVIEW_OFFSET, 0);
+	cur_set(CHX_CONTENT_END, 0);
 	printf("%-*c", CINST.bytes_per_row, ' ');
-	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_bytes; i++) {
+	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
 		if (i == CINST.cursor.pos)
 			printf(CHX_ASCII_SELECT_COLOUR);
 		else if (i == CINST.cursor.pos + 1)
 			printf("\e[0m");
 		if (!(i % CINST.bytes_per_row))
-			cur_set(CHX_PREVIEW_OFFSET, CHX_GET_Y(i));
+			cur_set(CHX_CONTENT_END, CHX_GET_Y(i));
 		if (i < CINST.fdata.len) {
 			if (IS_PRINTABLE(CINST.fdata.data[i]))
 				printf("%c", CINST.fdata.data[i]);
@@ -275,24 +265,41 @@ void chx_prompt_command() {
 	fgets(usrin, 256, stdin);
 	
 	// null terminate input at first newline
-	str_terminate_at(usrin, '\n');
+	char* p0 = chx_extract_param(usrin, 0);
 	
 	// lookup entered command and execute procedure
 	// for numbers (decimal or hex, prefixed with '0x') jump to the corresponging byte
-	if (usrin[0]) {
-		if (str_is_num(usrin)) {
-			CINST.cursor.pos = str_to_num(usrin);
+	// also implement cfg command
+	if (p0[0]) {
+		if (str_is_num(p0)) {
+			CINST.cursor.pos = str_to_num(p0);
 			CINST.cursor.sbpos = 0;
 			chx_update_cursor();
 			chx_draw_all();
-		} else if (WORD(usrin) == 0x7830 && str_is_hex(usrin + 2)) {
-			CINST.cursor.pos = str_to_hex(usrin + 2);
+		} else if (str_is_hex(p0)) {
+			CINST.cursor.pos = str_to_hex(p0);
 			CINST.cursor.sbpos = 0;
 			chx_update_cursor();
 			chx_draw_all();
+		} else if (cmp_str("cfg", p0)) {
+			char* p1 = chx_extract_param(usrin, 1);
+			char* p2 = chx_extract_param(usrin, 2);
+			char* prop_ptr = 0;
+			
+			if (cmp_str("rnl", p1))
+				prop_ptr = &CINST.row_num_len;
+			else if (cmp_str("gs", p1))
+				prop_ptr = &CINST.group_spacing;
+			else if (cmp_str("bpr", p1))
+				prop_ptr = &CINST.bytes_per_row;
+			else if (cmp_str("big", p1))
+				prop_ptr = &CINST.bytes_in_group;
+			
+			if (prop_ptr && str_is_num(p2))
+				*prop_ptr = str_to_num(p2);
 		} else
 			for (int i = 0; chx_commands[i].str; i++)
-				if (cmp_str(chx_commands[i].str, usrin)) {
+				if (cmp_str(chx_commands[i].str, p0)) {
 					chx_commands[i].execute();
 					CINST.last_action = chx_commands[i].execute;
 				}
@@ -686,10 +693,19 @@ int main(int argc, char** argv) {
 	CINST.group_spacing = CHX_GROUP_SPACING;
 	CINST.row_num_len = CHX_ROW_NUM_LEN;
 	CINST.num_rows = size.ws_row - PD;
-	CINST.num_bytes = CINST.num_rows * CINST.bytes_per_row;
 	CINST.endianness = CHX_DEFAULT_ENDIANNESS;
 	CINST.last_action = fvoid;
 	CINST.saved = 1;
+	
+	// only show preview or inspector if it will fit on the screen
+	CINST.show_inspector = (CHX_PREVIEW_END + 28 > CINST.width) ? 0 : CHX_SHOW_INSPECTOR_ON_STARTUP;
+	CINST.show_preview = (CHX_PREVIEW_END > CINST.width) ? 0 : CHX_SHOW_PREVIEW_ON_STARTUP;
+	
+	// if the screen cant fit the contents, remove one byte until it can be displayed
+	while (CHX_CONTENT_END > CINST.width && CINST.bytes_per_row) {
+		CINST.bytes_in_group = 1;
+		CINST.bytes_per_row--;
+	}
 	
 	// initialize cursor
 	CINST.cursor = (struct CHX_CURSOR) {0, 0};
