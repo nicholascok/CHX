@@ -84,21 +84,23 @@ void chx_redraw_line(int byte) {
 	}
 	
 	// draw ascii preview
-	cur_set(CHX_CONTENT_END, CHX_GET_Y(byte));
-	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
-		if (i == CINST.cursor.pos)
-			printf(CHX_ASCII_SELECT_COLOUR);
-		else if (i == CINST.cursor.pos + 1)
-			printf("\e[0m");
-		if (i < CINST.fdata.len) {
-			if (IS_PRINTABLE(CINST.fdata.data[i]))
-				printf("%c", CINST.fdata.data[i]);
-			else
-				printf("·");
-		} else
-			printf("•");
+	if (CINST.show_preview) {
+		cur_set(CHX_CONTENT_END, CHX_GET_Y(byte));
+		for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
+			if (i == CINST.cursor.pos)
+				printf(CHX_ASCII_SELECT_COLOUR);
+			else if (i == CINST.cursor.pos + 1)
+				printf("\e[0m");
+			if (i < CINST.fdata.len) {
+				if (IS_PRINTABLE(CINST.fdata.data[i]))
+					printf("%c", CINST.fdata.data[i]);
+				else
+					printf("·");
+			} else
+				printf("•");
+		}
+		printf("\e[0m");
 	}
-	printf("\e[0m");
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
