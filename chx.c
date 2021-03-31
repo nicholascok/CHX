@@ -257,19 +257,25 @@ void chx_draw_sidebar() {
 	cur_set(CHX_CONTENT_END, 0);
 	printf("%-*c", CINST.bytes_per_row, ' ');
 	for (long i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
-		if (i == CINST.cursor.pos)
-			printf(CHX_ASCII_SELECT_COLOUR);
-		else if (i == CINST.cursor.pos + 1)
-			printf("\e[0m");
 		if (!(i % CINST.bytes_per_row)) {
 			printf("%-*c", CINST.group_spacing, ' ');
 			cur_set(CHX_CONTENT_END, CHX_GET_Y(i));
-		} if (i < CINST.fdata.len) {
+		}
+		if (i < CINST.fdata.len) {
 			if (IS_PRINTABLE(CINST.fdata.data[i]))
-				printf("%c", CINST.fdata.data[i]);
+				if (i == CINST.cursor.pos)
+					printf(CHX_ASCII_SELECT_COLOUR"%c\e[0m", CINST.fdata.data[i]);
+				else
+					printf("%c", CINST.fdata.data[i]);
 			else
+				if (i == CINST.cursor.pos)
+					printf(CHX_ASCII_SELECT_COLOUR"·\e[0m");
+				else
 				printf("·");
 		} else
+			if (i == CINST.cursor.pos)
+				printf(CHX_ASCII_SELECT_COLOUR"•\e[0m");
+			else
 			printf("•");
 	}
 	

@@ -1,5 +1,5 @@
 CC			:= gcc
-CC_FLAGS	:= -O0 -lm
+CC_FLAGS	:= -Ofast -lm
 
 TARGET_DIR	:= build
 HEADERS		:= chx.h
