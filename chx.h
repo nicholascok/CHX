@@ -8,6 +8,7 @@
 #include <locale.h>
 #include <byteswap.h>
 #include <unistd.h>
+#include <limits.h>
 #include <termios.h>
 #include <sys/ioctl.h>
 

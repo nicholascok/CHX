@@ -26,27 +26,28 @@ void chx_export(char* fpath) {
 }
 
 void chx_update_cursor() {
-	if (CINST.cursor.pos >= 0) {
-		// scroll if pasting outside of visible screen
-		if (CINST.cursor.pos > (CINST.scroll_pos - 1) * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row) {
-			CINST.scroll_pos = (CINST.cursor.pos - CINST.num_rows * CINST.bytes_per_row) / CINST.bytes_per_row + 1;
-			chx_draw_contents();
-		} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
-			CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
-			chx_draw_contents();
-		}
-	} else {
+	if (CINST.cursor.pos < 0) {
 		CINST.cursor.sbpos = 0;
 		CINST.cursor.pos = 0;
+	} else if (CINST.cursor.pos > INT_MAX)
+		CINST.cursor.pos = INT_MAX;
+	else {
+		// scroll if pasting outside of visible screen
+		if (CINST.cursor.pos > (CINST.scroll_pos + CINST.num_rows - 1) * CINST.bytes_per_row)
+			CINST.scroll_pos = CINST.cursor.pos / CINST.bytes_per_row - CINST.num_rows + 1;
+		else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row)
+			CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
+		
+		chx_draw_contents();
 	}
 	
-	// redraw cursor
 	if (CINST.show_inspector)
 		chx_draw_extra();
 	
 	if (CINST.show_preview)
 		chx_draw_sidebar();
 	
+	// redraw cursor
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
@@ -60,24 +61,24 @@ void chx_swap_endianness() {
 	}
 }
 
-int chx_count_digits(int _n) {
+int chx_count_digits(long _n) {
 	int c = 0;
 	while ((_n /= 16) >= 1) c++;
 	return ++c;
 }
 
-void chx_redraw_line(int byte) {
+void chx_redraw_line(long byte) {
 	// calculate line number
-	int line_start = (byte / CINST.bytes_per_row) * CINST.bytes_per_row;
+	long line_start = (byte / CINST.bytes_per_row) * CINST.bytes_per_row;
 	
 	// print row number
 	int rnum_digits = chx_count_digits((CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row - 1);
 	CINST.row_num_len = (rnum_digits < CINST.min_row_num_len) ? CINST.min_row_num_len : rnum_digits;
-	printf(CHX_FRAME_COLOUR"\e[%d;0H%0*X \e[0m%-*c", CHX_GET_Y(byte) + 1, CINST.row_num_len, line_start, CINST.group_spacing, ' ');
+	printf(CHX_FRAME_COLOUR"\e[%d;0H%0*lX \e[0m%-*c", CHX_GET_Y(byte) + 1, CINST.row_num_len, line_start, CINST.group_spacing, ' ');
 	
 	// print row contents
 	cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(byte));
-	for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
+	for (long i = line_start; i < line_start + CINST.bytes_per_row; i++) {
 		if (i % CINST.bytes_per_row && !(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
 		if (i < CINST.fdata.len) {
@@ -152,7 +153,7 @@ void chx_print_status() {
 void chx_draw_extra() {
 	// copy bytes from file
 	char buf[16];
-	for (int i = 0; i < 16; i++)
+	for (long i = 0; i < 16; i++)
 		if (CINST.cursor.pos + i < CINST.fdata.len)
 			buf[i] = CINST.fdata.data[CINST.cursor.pos + i];
 		else
@@ -232,7 +233,7 @@ void chx_draw_contents() {
 	printf("\e[0m");
 	
 	// print main contents
-	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
+	for (long i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
 		if (!(i % CINST.bytes_per_row)) {
 			printf("%-*c", CINST.group_spacing, ' ');
 			cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(i));
@@ -255,7 +256,7 @@ void chx_draw_contents() {
 void chx_draw_sidebar() {
 	cur_set(CHX_CONTENT_END, 0);
 	printf("%-*c", CINST.bytes_per_row, ' ');
-	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
+	for (long i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
 		if (i == CINST.cursor.pos)
 			printf(CHX_ASCII_SELECT_COLOUR);
 		else if (i == CINST.cursor.pos + 1)

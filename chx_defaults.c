@@ -190,20 +190,20 @@ char str_is_hex(char* _s) {
 }
 
 int str_to_num(char* _s) {
-	int total = 0;
+	long total = 0;
 	for (int i = 0; _s[i]; i++)
 		total = total * 10 + _s[i] - 0x30;
-	return total;
+	return (total > INT_MAX) ? INT_MAX : total;
 }
 
 int str_to_hex(char* _s) {
-	int total = 0;
+	long total = 0;
 	for (int i = 2; _s[i]; i++) {
 		total *= 16;
 		if ((_s[i] ^ 0x60) < 7) _s[i] -= 32;
 		total += (_s[i] > 0x40) ? _s[i] - 0x37 : _s[i] - 0x30;
 	}
-	return total;
+	return (total > INT_MAX) ? INT_MAX : total;
 }
 
 void chx_resize_file(long _n) {
@@ -228,6 +228,7 @@ void chx_to_start() {
 	CINST.cursor.pos = 0;
 	CINST.cursor.sbpos = 0;
 	CINST.scroll_pos = 0;
+	cls();
 	chx_draw_all();
 }
 
@@ -236,6 +237,7 @@ void chx_to_end() {
 	CINST.cursor.sbpos = 1;
 	int new_scroll = (CINST.cursor.pos / CINST.bytes_per_row) - CINST.num_rows / 2;
 	CINST.scroll_pos = (new_scroll >= 0) ? new_scroll : 0;
+	cls();
 	chx_draw_all();
 }
 
