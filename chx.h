@@ -131,6 +131,7 @@ struct CHX_INSTANCE {
 	char bytes_in_group;
 	char group_spacing;
 	char row_num_len;
+	char min_row_num_len;
 	int height;
 	int width;
 	int x_offset;

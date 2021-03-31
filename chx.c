@@ -60,12 +60,20 @@ void chx_swap_endianness() {
 	}
 }
 
+int chx_count_digits(int _n) {
+	int c = 0;
+	while ((_n /= 16) >= 1) c++;
+	return ++c;
+}
+
 void chx_redraw_line(int byte) {
 	// calculate line number
 	int line_start = (byte / CINST.bytes_per_row) * CINST.bytes_per_row;
 	
 	// print row number
-	printf(CHX_FRAME_COLOUR"\e[%d;0H%0*X \e[0m", CHX_GET_Y(byte) + 1, CINST.row_num_len, line_start);
+	int rnum_digits = chx_count_digits((CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row - 1);
+	CINST.row_num_len = (rnum_digits < CINST.min_row_num_len) ? CINST.min_row_num_len : rnum_digits;
+	printf(CHX_FRAME_COLOUR"\e[%d;0H%0*X \e[0m%-*c", CHX_GET_Y(byte) + 1, CINST.row_num_len, line_start, CINST.group_spacing, ' ');
 	
 	// print row contents
 	cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(byte));
@@ -82,6 +90,8 @@ void chx_redraw_line(int byte) {
 		} else
 			printf("..");
 	}
+	
+	printf("%-*c", CINST.group_spacing, ' ');
 	
 	// draw ascii preview
 	if (CINST.show_preview) {
@@ -101,6 +111,8 @@ void chx_redraw_line(int byte) {
 		}
 		printf("\e[0m");
 	}
+	
+	printf("%-*c", CINST.group_spacing, ' ');
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
@@ -185,14 +197,14 @@ void chx_draw_extra() {
 
 void chx_draw_all() {
 	// draw elements
+	chx_draw_contents();
+	chx_print_status();
+	
 	if (CINST.show_preview)
 		chx_draw_sidebar();
 	
 	if (CINST.show_inspector)
 		chx_draw_extra();
-	
-	chx_draw_contents();
-	chx_print_status();
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
@@ -200,6 +212,10 @@ void chx_draw_all() {
 }
 
 void chx_draw_contents() {
+	// recalculate row num length
+	int rnum_digits = chx_count_digits((CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row - 1);
+	CINST.row_num_len = (rnum_digits < CINST.min_row_num_len) ? CINST.min_row_num_len : rnum_digits;
+	
 	// print header
 	printf("\e[0;0H%-*c"CHX_FRAME_COLOUR, CINST.row_num_len + CINST.group_spacing, ' ');
 	if (CINST.group_spacing != 0)
@@ -211,15 +227,16 @@ void chx_draw_contents() {
 	
 	// print row numbers
 	for (int i = 0; i < CINST.num_rows; i++)
-		printf("\e[%d;0H%0*lX", i + TPD + 1, CINST.row_num_len, (i + CINST.scroll_pos) * CINST.bytes_per_row);
+		printf("\e[%d;0H%0*lX%-*c", i + TPD + 1, CINST.row_num_len, (i + CINST.scroll_pos) * CINST.bytes_per_row, CINST.group_spacing, ' ');
 	
 	printf("\e[0m");
 	
 	// print main contents
 	for (int i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
-		if (!(i % CINST.bytes_per_row))
+		if (!(i % CINST.bytes_per_row)) {
+			printf("%-*c", CINST.group_spacing, ' ');
 			cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(i));
-		else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
+		} else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
 		if (i < CINST.fdata.len) {
 			if (CINST.selected && BETWEEN(i, CINST.sel_start, CINST.sel_stop))
@@ -231,6 +248,8 @@ void chx_draw_contents() {
 		} else
 			printf("..");
 	}
+	
+	printf("%-*c", CINST.group_spacing, ' ');
 }
 
 void chx_draw_sidebar() {
@@ -241,9 +260,10 @@ void chx_draw_sidebar() {
 			printf(CHX_ASCII_SELECT_COLOUR);
 		else if (i == CINST.cursor.pos + 1)
 			printf("\e[0m");
-		if (!(i % CINST.bytes_per_row))
+		if (!(i % CINST.bytes_per_row)) {
+			printf("%-*c", CINST.group_spacing, ' ');
 			cur_set(CHX_CONTENT_END, CHX_GET_Y(i));
-		if (i < CINST.fdata.len) {
+		} if (i < CINST.fdata.len) {
 			if (IS_PRINTABLE(CINST.fdata.data[i]))
 				printf("%c", CINST.fdata.data[i]);
 			else
@@ -251,7 +271,8 @@ void chx_draw_sidebar() {
 		} else
 			printf("•");
 	}
-	printf("\e[0m");
+	
+	printf("\e[0m%-*c", CINST.group_spacing, ' ');
 }
 
 void chx_prompt_command() {
@@ -289,7 +310,7 @@ void chx_prompt_command() {
 			char* prop_ptr = 0;
 			
 			if (cmp_str("rnl", p1))
-				prop_ptr = &CINST.row_num_len;
+				prop_ptr = &CINST.min_row_num_len;
 			else if (cmp_str("gs", p1))
 				prop_ptr = &CINST.group_spacing;
 			else if (cmp_str("bpr", p1))
@@ -693,6 +714,7 @@ int main(int argc, char** argv) {
 	CINST.bytes_per_row = CHX_BYTES_PER_ROW;
 	CINST.bytes_in_group = CHX_BYTES_IN_GROUP;
 	CINST.group_spacing = CHX_GROUP_SPACING;
+	CINST.min_row_num_len =
 	CINST.row_num_len = CHX_ROW_NUM_LEN;
 	CINST.num_rows = size.ws_row - PD;
 	CINST.endianness = CHX_DEFAULT_ENDIANNESS;
