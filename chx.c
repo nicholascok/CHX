@@ -43,6 +43,7 @@ void chx_update_cursor() {
 				chx_draw_header();
 				chx_print_status();
 			} else {
+				chx_draw_header();
 				chx_draw_contents();
 			}
 		} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
@@ -54,6 +55,7 @@ void chx_update_cursor() {
 				chx_draw_header();
 				chx_print_status();
 			} else {
+				chx_draw_header();
 				chx_draw_contents();
 			}
 		}
