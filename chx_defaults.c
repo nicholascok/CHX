@@ -116,7 +116,8 @@ void chx_start_selection() {
 void chx_clear_selection() {
 	CINST.selected = 0;
 	chx_draw_contents();
-	chx_draw_sidebar();
+	if (CINST.show_preview)
+		chx_draw_sidebar();
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }

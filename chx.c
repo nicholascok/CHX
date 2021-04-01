@@ -98,7 +98,7 @@ void chx_redraw_line(long line) {
 		printf(CHX_ASCII_SELECT_FORMAT);
 	
 	for (long i = line_start; i < line_start + CINST.bytes_per_row; i++) {
-		if (i % CINST.bytes_per_row && !(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
+		if (i != line_start && !(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
 		
 		if (i < CINST.fdata.len) {
@@ -116,7 +116,7 @@ void chx_redraw_line(long line) {
 			printf("\e[0m");
 	}
 	
-	printf("\e[0m%-*c", CINST.group_spacing, ' ');
+	printf("\e[0m");
 	
 	// draw ascii preview
 	if (CINST.selected && sel_begin < CINST.scroll_pos * CINST.bytes_per_row)
