@@ -635,9 +635,6 @@ void chx_main() {
 			if (is_valid) CINST.last_action = chx_keybinds_global[WORD(key)];
 		}
 		
-		// clear selection if cursor is not at the end of the selection (meaning the user is no longer selecting and the cursor has moved)
-		if (CINST.selected && CINST.cursor.pos != CINST.sel_stop) chx_clear_selection();
-		
 		switch (CINST.mode) {
 			default:
 			case CHX_MODE_DEFAULT:
@@ -678,6 +675,9 @@ void chx_main() {
 				else if (WORD(key) == 0x7F) chx_backspace_ascii();
 				break;
 		}
+		
+		// clear selection if cursor is not at the end of the selection (meaning the user is no longer selecting and the cursor has moved)
+		if (CINST.selected && CINST.cursor.pos != CINST.sel_stop) chx_clear_selection();
 	}
 }
 
