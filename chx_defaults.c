@@ -116,6 +116,7 @@ void chx_start_selection() {
 void chx_clear_selection() {
 	CINST.selected = 0;
 	chx_draw_contents();
+	chx_draw_sidebar();
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
 }
@@ -123,38 +124,32 @@ void chx_clear_selection() {
 void chx_cursor_select_up() {
 	if (!CINST.selected) chx_start_selection();
 	chx_cursor_move_up();
+	CINST.cursor.sbpos = 0;
 	CINST.sel_stop = CINST.cursor.pos;
-	chx_draw_contents();
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
+	chx_draw_all();
 }
 
 void chx_cursor_select_down() {
 	if (!CINST.selected) chx_start_selection();
 	chx_cursor_move_down();
+	CINST.cursor.sbpos = 0;
 	CINST.sel_stop = CINST.cursor.pos;
-	chx_draw_contents();
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
+	chx_draw_all();
 }
 
 void chx_cursor_select_right() {
 	if (!CINST.selected) chx_start_selection();
-	chx_cursor_move_right();
+	chx_cursor_next_byte();
 	CINST.sel_stop = CINST.cursor.pos;
-	chx_draw_contents();
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
+	chx_draw_all();
 }
 
 void chx_cursor_select_left() {
 	if (CINST.cursor.pos || CINST.cursor.sbpos)
 		if (!CINST.selected) chx_start_selection();
-	chx_cursor_move_left();
+	chx_cursor_prev_byte();
 	CINST.sel_stop = CINST.cursor.pos;
-	chx_draw_contents();
-	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-	fflush(stdout);
+	chx_draw_all();
 }
 
 long chx_abs(long _n) {
@@ -176,6 +171,12 @@ char* recalloc(char* _p, long _o, long _n) {
 	for (int i = 0; i < min(_o, _n); i++) ptr[i] = _p[i];
 	free(_p);
 	return ptr;
+}
+
+int chx_count_digits(long _n) {
+	int c = 0;
+	while ((_n /= 16) >= 1) c++;
+	return ++c;
 }
 
 char str_is_num(char* _s) {
@@ -234,7 +235,7 @@ void chx_to_start() {
 
 void chx_to_end() {
 	CINST.cursor.pos = CINST.fdata.len - 1;
-	CINST.cursor.sbpos = 1;
+	CINST.cursor.sbpos = 0;
 	int new_scroll = (CINST.cursor.pos / CINST.bytes_per_row) - CINST.num_rows / 2;
 	CINST.scroll_pos = (new_scroll >= 0) ? new_scroll : 0;
 	cls();
@@ -380,7 +381,7 @@ void chx_save_as() {
 
 void chx_copy() {
 	long sel_begin = min(CINST.sel_start, CINST.sel_stop);
-	CINST.copy_buffer_len = chx_abs(CINST.sel_start - CINST.sel_stop) + 1;
+	CINST.copy_buffer_len = chx_abs(CINST.sel_start - CINST.sel_stop);
 	if (CINST.copy_buffer_len + sel_begin > CINST.fdata.len)
 		CINST.copy_buffer_len -= CINST.copy_buffer_len + sel_begin - CINST.fdata.len;
 	CINST.copy_buffer = malloc(CINST.copy_buffer_len);
@@ -477,8 +478,8 @@ void chx_delete_selected() {
 				CINST.fdata.data[i] = 0;
 				CINST.style_data[i / 8] |= 0x80 >> (i % 8);
 			}
-		CINST.cursor.pos = (sel_begin > 0) ? sel_begin - 1 : 0;
-		CINST.cursor.sbpos = 1;
+		CINST.cursor.pos = (sel_begin > 0) ? sel_begin : 0;
+		CINST.cursor.sbpos = 0;
 		chx_clear_selection();
 		chx_draw_all();
 	}

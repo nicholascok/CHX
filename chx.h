@@ -54,7 +54,8 @@
 #define CHX_BIG_ENDIAN 0
 
 #define FORMAT_UNDERLINE "\e[4m"
-#define COLOUR_REVERSE "\e[7m"
+#define FORMAT_BOLD "\e[1m"
+#define FORMAT_REVERSE "\e[7m"
 #define COLOUR_BLACK "\e[30m"
 #define COLOUR_RED "\e[31m"
 #define COLOUR_GREEN "\e[32m"
@@ -71,7 +72,7 @@
 #define IS_DIGIT(C) ((C ^ 0x30) < 10)
 
 #define CINST CHX_INSTANCES[CHX_SEL_INSTANCE]
-#define BETWEEN(X, A, B) (X >= min(A, B) && X <= max(A, B))
+#define BETWEEN_GE1_L2(X, A, B) (X >= min(A, B) && X < max(A, B))
 #define CHX_CONTENT_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + CINST.group_spacing)
 #define CHX_PREVIEW_END (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * (CINST.bytes_per_row / CINST.bytes_in_group) + 2 * CINST.group_spacing + CINST.bytes_per_row)
 #define CHX_CURSOR_X (int) (CINST.row_num_len + (CINST.bytes_in_group * 2 + CINST.group_spacing) * ((CINST.cursor.pos % CINST.bytes_per_row) / CINST.bytes_in_group) + 2 * (CINST.cursor.pos % CINST.bytes_in_group) + CINST.cursor.sbpos + CINST.group_spacing)
@@ -109,7 +110,7 @@ struct chx_command {
 struct CHX_CURSOR {
 	long pos;
 	char sbpos;
-} CHXCUR;
+};
 
 struct chx_key {
 	char val, type;
