@@ -2,7 +2,6 @@
 #define __CHX_CAOIMH__
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <stdint.h>
 #include <malloc.h>
 #include <locale.h>
@@ -168,6 +167,7 @@ void chx_prompt_command();
 
 struct chx_key chx_get_key();
 char chx_get_char();
+void chx_get_str();
 
 void chx_print_status();
 void chx_update_cursor();
@@ -175,6 +175,7 @@ void chx_swap_endianness();
 void chx_draw_contents();
 void chx_draw_sidebar();
 void chx_draw_extra();
+void chx_draw_header();
 void chx_draw_all();
 void chx_redraw_line();
 

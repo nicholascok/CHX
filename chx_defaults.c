@@ -123,33 +123,54 @@ void chx_clear_selection() {
 
 void chx_cursor_select_up() {
 	if (!CINST.selected) chx_start_selection();
-	chx_cursor_move_up();
+	CINST.cursor.pos -= (CINST.cursor.pos >= CINST.bytes_per_row) * CINST.bytes_per_row;
 	CINST.cursor.sbpos = 0;
 	CINST.sel_stop = CINST.cursor.pos;
-	chx_draw_all();
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row + 1);
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row);
+	chx_update_cursor();
 }
 
 void chx_cursor_select_down() {
 	if (!CINST.selected) chx_start_selection();
-	chx_cursor_move_down();
+	CINST.cursor.pos += CINST.bytes_per_row;
 	CINST.cursor.sbpos = 0;
 	CINST.sel_stop = CINST.cursor.pos;
-	chx_draw_all();
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row);
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row - 1);
+	chx_update_cursor();
 }
 
 void chx_cursor_select_right() {
 	if (!CINST.selected) chx_start_selection();
-	chx_cursor_next_byte();
+	CINST.cursor.pos++;
+	CINST.cursor.sbpos = 0;
 	CINST.sel_stop = CINST.cursor.pos;
-	chx_draw_all();
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row);
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row - 1);
+	chx_update_cursor();
 }
 
 void chx_cursor_select_left() {
-	if (CINST.cursor.pos || CINST.cursor.sbpos)
-		if (!CINST.selected) chx_start_selection();
-	chx_cursor_prev_byte();
+	if (!CINST.selected) chx_start_selection();
+	CINST.cursor.pos--;
+	CINST.cursor.sbpos = 0;
 	CINST.sel_stop = CINST.cursor.pos;
-	chx_draw_all();
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row + 1);
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row);
+	chx_update_cursor();
+}
+
+void chx_exit() {
+	// re-enable key echoing
+	struct termios old = {0};
+	tcgetattr(0, &old);
+	old.c_lflag |= ECHO;
+	tcsetattr(0, TCSADRAIN, &old);
+	
+	// exit
+	texit();
+	exit(0);
 }
 
 long chx_abs(long _n) {
@@ -361,7 +382,7 @@ void chx_save_as() {
 	printf("SAVE AS? (LEAVE EMPTY TO CANCEL): ");
 	fflush(stdout);
 	
-	fgets(usrin, 256, stdin);
+	chx_get_str(usrin, 256);
 	
 	// null terminate input at first newline
 	char* filename = chx_extract_param(usrin, 0);
@@ -450,7 +471,7 @@ void chx_remove_selected() {
 	if (CINST.selected) {
 		long sel_begin = min(CINST.sel_start, CINST.sel_stop);
 		long sel_end = max(CINST.sel_start, CINST.sel_stop);
-		long sel_size = sel_end - sel_begin + 1;
+		long sel_size = sel_end - sel_begin;
 		CINST.saved = 0;
 		if (sel_end > CINST.fdata.len - 1)
 			chx_resize_file(sel_begin);
@@ -474,7 +495,7 @@ void chx_delete_selected() {
 		if (sel_end > CINST.fdata.len - 1)
 			chx_resize_file(sel_begin);
 		else
-			for (int i = sel_begin; i < sel_end + 1; i++) {
+			for (int i = sel_begin; i < sel_end; i++) {
 				CINST.fdata.data[i] = 0;
 				CINST.style_data[i / 8] |= 0x80 >> (i % 8);
 			}
@@ -487,13 +508,7 @@ void chx_delete_selected() {
 
 void chx_save_and_quit() {
 	chx_export(CINST.fdata.filename);
-	texit();
-	exit(0);
-}
-
-void chx_exit() {
-	texit();
-	exit(0);
+	chx_exit();
 }
 
 void chx_quit() {

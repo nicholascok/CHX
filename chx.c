@@ -7,7 +7,7 @@ struct chx_finfo chx_import(char* fpath) {
 	FILE* inf = fopen(fpath, "r+b");
 	if (!inf) {
 		printf("file \"%s\" not found.\n", fpath);
-		exit(0);
+		chx_exit();
 	}
 	fseek(inf, 0, SEEK_END);
 	long flen = ftell(inf);
@@ -33,12 +33,30 @@ void chx_update_cursor() {
 		CINST.cursor.pos = INT_MAX;
 	else {
 		// scroll if pasting outside of visible screen
-		if (CINST.cursor.pos > (CINST.scroll_pos + CINST.num_rows - 1) * CINST.bytes_per_row)
+		int spo = CINST.scroll_pos;
+		if (CINST.cursor.pos >= (CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row) {
 			CINST.scroll_pos = CINST.cursor.pos / CINST.bytes_per_row - CINST.num_rows + 1;
-		else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row)
+			if (CINST.scroll_pos < spo + CINST.num_rows) {
+				printf("\e[%liS", CINST.scroll_pos - spo);
+				for (int i = spo; i < CINST.scroll_pos; i++)
+					chx_redraw_line(i + CINST.num_rows);
+				chx_draw_header();
+				chx_print_status();
+			} else {
+				chx_draw_contents();
+			}
+		} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
 			CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
-		
-		chx_draw_contents();
+			if (spo < CINST.scroll_pos + CINST.num_rows) {
+				printf("\e[%liT", spo - CINST.scroll_pos);
+				for (int i = CINST.scroll_pos; i < spo; i++)
+					chx_redraw_line(i);
+				chx_draw_header();
+				chx_print_status();
+			} else {
+				chx_draw_contents();
+			}
+		}
 	}
 	
 	if (CINST.show_inspector)
@@ -61,59 +79,80 @@ void chx_swap_endianness() {
 	}
 }
 
-void chx_redraw_line(long byte) {
+void chx_redraw_line(long line) {
 	// calculate line number
-	long line_start = (byte / CINST.bytes_per_row) * CINST.bytes_per_row;
+	long line_start = line * CINST.bytes_per_row;
+	int cur_y = line - CINST.scroll_pos + TPD;
 	
 	// print row number
 	int rnum_digits = chx_count_digits((CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row - 1);
 	CINST.row_num_len = (rnum_digits < CINST.min_row_num_len) ? CINST.min_row_num_len : rnum_digits;
-	printf(CHX_FRAME_COLOUR"\e[%d;0H%0*lX \e[0m%-*c", CHX_GET_Y(byte) + 1, CINST.row_num_len, line_start, CINST.group_spacing, ' ');
+	cur_set(0, cur_y);
+	printf(CHX_FRAME_COLOUR"%0*lX \e[0m%-*c", CINST.row_num_len, line_start, CINST.group_spacing, ' ');
 	
 	// print row contents
-	cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(byte));
+	long sel_begin = min(CINST.sel_start, CINST.sel_stop);
+	long sel_end = max(CINST.sel_start, CINST.sel_stop);
+	
+	cur_set(CINST.row_num_len + CINST.group_spacing, cur_y);
+	
+	if (CINST.selected && line_start >= sel_begin && line_start < sel_end)
+		printf(CHX_ASCII_SELECT_FORMAT);
+	
 	for (long i = line_start; i < line_start + CINST.bytes_per_row; i++) {
 		if (i % CINST.bytes_per_row && !(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
+		
 		if (i < CINST.fdata.len) {
-			if (CINST.selected && BETWEEN_GE1_L2(i, CINST.sel_start, CINST.sel_stop))
-				printf(CHX_SELECT_FORMAT"%02X\e[0m", CINST.fdata.data[i]);
-			else if (CINST.style_data[i / 8] & (0x80 >> (i % 8)))
+			if (CINST.selected && i == sel_begin && sel_end != sel_begin)
+				printf(CHX_ASCII_SELECT_FORMAT);
+			
+			if ((!CINST.selected || i < sel_begin || i >= sel_end) && CINST.style_data[i / 8] & (0x80 >> (i % 8)))
 				printf(CHX_UNSAVED_COLOUR"%02X\e[0m", CINST.fdata.data[i]);
 			else
 				printf("%02X", CINST.fdata.data[i]);
 		} else
 			printf("..");
+		
+		if (CINST.selected && i == sel_end - 1)
+			printf("\e[0m");
 	}
 	
-	printf("%-*c", CINST.group_spacing, ' ');
+	printf("\e[0m%-*c", CINST.group_spacing, ' ');
 	
 	// draw ascii preview
+	if (CINST.selected && sel_begin < CINST.scroll_pos * CINST.bytes_per_row)
+		printf(CHX_ASCII_SELECT_FORMAT);
+	
 	if (CINST.show_preview) {
-		cur_set(CHX_CONTENT_END, CHX_GET_Y(byte));
+		cur_set(CHX_CONTENT_END, cur_y);
 		for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
-			if (!(i % CINST.bytes_per_row)) {
-				printf("%-*c", CINST.group_spacing, ' ');
+			if (!(i % CINST.bytes_per_row))
 				cur_set(CHX_CONTENT_END, CHX_GET_Y(i));
-			}
 			
-			if (i == CINST.cursor.pos)
+			if (i == CINST.cursor.pos && !CINST.selected)
 				printf(CHX_ASCII_CUR_FORMAT);
 			
 			if (i < CINST.fdata.len) {
-				if (CINST.selected && BETWEEN_GE1_L2(i, CINST.sel_start, CINST.sel_stop)) printf(CHX_ASCII_SELECT_FORMAT);
+				if (CINST.selected && i == sel_begin && sel_end != sel_begin)
+					printf(CHX_ASCII_SELECT_FORMAT);
+				
 				if (IS_PRINTABLE(CINST.fdata.data[i]))
 					printf("%c", CINST.fdata.data[i]);
 				else
 					printf("·");
 			} else
 				printf("•");
-			
-			printf("\e[0m");
+		
+			if (CINST.selected) {
+				if (i == sel_end - 1)
+					printf("\e[0m");
+			} else if (i == CINST.cursor.pos)
+				printf("\e[0m");
 		}
 	}
 	
-	printf("%-*c", CINST.group_spacing, ' ');
+	printf("\e[0m%-*c", CINST.group_spacing, ' ');
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
@@ -153,7 +192,6 @@ void chx_print_status() {
 void chx_draw_extra() {
 	// copy bytes from file
 	char buf[16];
-	
 	for (long i = 0; i < 16; i++)
 		if (CINST.cursor.pos + i < CINST.fdata.len)
 			buf[i] = CINST.fdata.data[CINST.cursor.pos + i];
@@ -194,11 +232,13 @@ void chx_draw_extra() {
 	printf("\e[%dG\e[1B\e[0K\e[1B ", offset);
 	if (CINST.endianness) printf("\e[0K[LITTLE ENDIAN]");
 	else printf("\e[0K[BIG ENDIAN]");
-	printf("\e[%dG\e[1B\e[0K\e[0m", offset);
+	for (int i = 14; i < CINST.num_rows; i++)
+		printf("\e[%dG\e[1B\e[0K\e[0m", offset);
 }
 
 void chx_draw_all() {
 	// draw elements
+	chx_draw_header();
 	chx_draw_contents();
 	chx_print_status();
 	
@@ -213,12 +253,7 @@ void chx_draw_all() {
 	fflush(stdout);
 }
 
-void chx_draw_contents() {
-	// recalculate row num length
-	int rnum_digits = chx_count_digits((CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row - 1);
-	CINST.row_num_len = (rnum_digits < CINST.min_row_num_len) ? CINST.min_row_num_len : rnum_digits;
-	
-	// print header
+void chx_draw_header() {
 	printf("\e[0;0H%-*c"CHX_FRAME_COLOUR, CINST.row_num_len + CINST.group_spacing, ' ');
 	if (CINST.group_spacing != 0)
 		for (int i = 0; i < CINST.bytes_per_row / CINST.bytes_in_group; i++)
@@ -226,49 +261,73 @@ void chx_draw_contents() {
 	else 
 		for (int i = 0; i < CINST.bytes_per_row / CINST.bytes_in_group; i++)
 			printf("%02X", i * CINST.bytes_in_group);
-	
+	printf("\e[0m");
+}
+
+void chx_draw_contents() {
 	// print row numbers
-	for (int i = 0; i < CINST.num_rows; i++)
-		printf("\e[%d;0H%0*lX%-*c", i + TPD + 1, CINST.row_num_len, (i + CINST.scroll_pos) * CINST.bytes_per_row, CINST.group_spacing, ' ');
+	int rnum_digits = chx_count_digits((CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row - 1);
+	CINST.row_num_len = (rnum_digits < CINST.min_row_num_len) ? CINST.min_row_num_len : rnum_digits;
+	
+	for (int i = 0; i < CINST.num_rows; i++) {
+		cur_set(0, i + TPD);
+		printf(CHX_FRAME_COLOUR"%0*lX \e[0m%-*c", CINST.row_num_len, (long) ((i + CINST.scroll_pos) * CINST.bytes_per_row), CINST.group_spacing, ' ');
+	}
 	
 	printf("\e[0m");
 	
 	// print main contents
+	long sel_begin = min(CINST.sel_start, CINST.sel_stop);
+	long sel_end = max(CINST.sel_start, CINST.sel_stop);
+	
+	if (CINST.selected && sel_begin < CINST.scroll_pos * CINST.bytes_per_row)
+		printf(CHX_ASCII_SELECT_FORMAT);
+	
 	for (long i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
-		if (!(i % CINST.bytes_per_row)) {
-			printf("%-*c", CINST.group_spacing, ' ');
+		if (!(i % CINST.bytes_per_row))
 			cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(i));
-		} else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
+		else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
+		
 		if (i < CINST.fdata.len) {
-			if (CINST.selected && BETWEEN_GE1_L2(i, CINST.sel_start, CINST.sel_stop))
-				printf(CHX_SELECT_FORMAT"%02X\e[0m", CINST.fdata.data[i]);
-			else if (CINST.style_data[i / 8] & (0x80 >> (i % 8)))
+			if (CINST.selected && i == sel_begin && sel_end != sel_begin)
+				printf(CHX_ASCII_SELECT_FORMAT);
+			
+			if ((!CINST.selected || i < sel_begin || i >= sel_end) && CINST.style_data[i / 8] & (0x80 >> (i % 8)))
 				printf(CHX_UNSAVED_COLOUR"%02X\e[0m", CINST.fdata.data[i]);
 			else
 				printf("%02X", CINST.fdata.data[i]);
 		} else
 			printf("..");
+		
+		if (CINST.selected && i == sel_end - 1)
+			printf("\e[0m");
 	}
 	
-	printf("%-*c", CINST.group_spacing, ' ');
+	printf("\e[0m%-*c", CINST.group_spacing, ' ');
 }
 
 void chx_draw_sidebar() {
 	cur_set(CHX_CONTENT_END, 0);
 	printf("%-*c", CINST.bytes_per_row, ' ');
 	
+	long sel_begin = min(CINST.sel_start, CINST.sel_stop);
+	long sel_end = max(CINST.sel_start, CINST.sel_stop);
+	
+	if (CINST.selected && sel_begin < CINST.scroll_pos * CINST.bytes_per_row)
+		printf(CHX_ASCII_SELECT_FORMAT);
+	
 	for (long i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
-		if (!(i % CINST.bytes_per_row)) {
-			printf("%-*c", CINST.group_spacing, ' ');
+		if (!(i % CINST.bytes_per_row))
 			cur_set(CHX_CONTENT_END, CHX_GET_Y(i));
-		}
 		
-		if (i == CINST.cursor.pos)
+		if (i == CINST.cursor.pos && !CINST.selected)
 			printf(CHX_ASCII_CUR_FORMAT);
 		
 		if (i < CINST.fdata.len) {
-			if (CINST.selected && BETWEEN_GE1_L2(i, CINST.sel_start, CINST.sel_stop)) printf(CHX_ASCII_SELECT_FORMAT);
+			if (CINST.selected && i == sel_begin && sel_end != sel_begin)
+				printf(CHX_ASCII_SELECT_FORMAT);
+			
 			if (IS_PRINTABLE(CINST.fdata.data[i]))
 				printf("%c", CINST.fdata.data[i]);
 			else
@@ -276,10 +335,14 @@ void chx_draw_sidebar() {
 		} else
 			printf("•");
 		
-		printf("\e[0m");
+		if (CINST.selected) {
+			if (i == sel_end - 1)
+				printf("\e[0m");
+		} else if (i == CINST.cursor.pos)
+			printf("\e[0m");
 	}
 	
-	printf("%-*c", CINST.group_spacing, ' ');
+	printf("\e[0m%-*c", CINST.group_spacing, ' ');
 }
 
 void chx_prompt_command() {
@@ -292,7 +355,7 @@ void chx_prompt_command() {
 	printf("\e[2K: ");
 	fflush(stdout);
 	
-	fgets(usrin, 256, stdin);
+	chx_get_str(usrin, 256);
 	
 	// null terminate input at first newline
 	char* p0 = chx_extract_param(usrin, 0);
@@ -360,7 +423,7 @@ void chx_set_hexchar(char _c) {
 	CINST.saved = 0;
 	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
 	
-	chx_redraw_line(CINST.cursor.pos);
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row);
 	chx_update_cursor();
 }
 
@@ -427,7 +490,7 @@ void chx_delete_hexchar() {
 	CINST.saved = 0;
 	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
 	
-	chx_redraw_line(CINST.cursor.pos);
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row);
 	fflush(stdout);
 }
 
@@ -492,7 +555,7 @@ void chx_set_ascii(char _c) {
 	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
 	
 	// update cursor and redraw line
-	chx_redraw_line(CINST.cursor.pos);
+	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row);
 	fflush(stdout);
 }
 
@@ -626,7 +689,6 @@ struct chx_key chx_get_key() {
         struct termios old = {0};
         tcgetattr(0, &old);
         old.c_lflag &= ~ICANON;
-        old.c_lflag &= ~ECHO;
         old.c_cc[VMIN] = 1;
         old.c_cc[VTIME] = 0;
         tcsetattr(0, TCSANOW, &old);
@@ -648,7 +710,6 @@ struct chx_key chx_get_key() {
 		
 		// restore flags and re-enter cooked mode
         old.c_lflag |= ICANON;
-        old.c_lflag |= ECHO;
         tcsetattr(0, TCSADRAIN, &old);
 		
         return key;
@@ -661,7 +722,7 @@ char chx_get_char() {
         struct termios old = {0};
         tcgetattr(0, &old);
         old.c_lflag &= ~ICANON;
-        old.c_lflag &= ~ECHO;
+        old.c_lflag |= ECHO;
         old.c_cc[VMIN] = 1;
         old.c_cc[VTIME] = 0;
         tcsetattr(0, TCSANOW, &old);
@@ -670,10 +731,44 @@ char chx_get_char() {
 		
 		// restore flags and re-enter cooked mode
         old.c_lflag |= ICANON;
-        old.c_lflag |= ECHO;
+        old.c_lflag &= ~ECHO;
         tcsetattr(0, TCSADRAIN, &old);
 		
         return buf;
+}
+
+void chx_get_str(char* _buf, int _len) {
+		// set terminal flags and enter raw mode
+        struct termios old = {0};
+        tcgetattr(0, &old);
+        old.c_lflag &= ~ICANON;
+        old.c_cc[VMIN] = 1;
+        old.c_cc[VTIME] = 0;
+        tcsetattr(0, TCSANOW, &old);
+		
+		for (int i = 0; i < _len; i++) {
+			read(0, _buf + i, 1);
+			switch (_buf[i]) {
+				case 0x7F:
+					if (i-- > 0) {
+						i--;
+						printf("\b \b");
+						fflush(stdout);
+					}
+					break;
+				case 0x0A:
+					return;
+				default:
+					printf("%c", _buf[i]);
+					fflush(stdout);
+					break;
+			}
+		}
+        
+		
+		// restore flags and re-enter cooked mode
+        old.c_lflag |= ICANON;
+        tcsetattr(0, TCSADRAIN, &old);
 }
 
 int main(int argc, char** argv) {
