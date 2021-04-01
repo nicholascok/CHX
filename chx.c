@@ -29,9 +29,9 @@ void chx_update_cursor() {
 	if (CINST.cursor.pos < 0) {
 		CINST.cursor.sbpos = 0;
 		CINST.cursor.pos = 0;
-	} else if (CINST.cursor.pos > INT_MAX)
+	} else if (CINST.cursor.pos > INT_MAX) {
 		CINST.cursor.pos = INT_MAX;
-	else {
+	} else {
 		// scroll if pasting outside of visible screen
 		int spo = CINST.scroll_pos;
 		if (CINST.cursor.pos >= (CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row) {
@@ -43,7 +43,6 @@ void chx_update_cursor() {
 				chx_draw_header();
 				chx_print_status();
 			} else {
-				chx_draw_header();
 				chx_draw_contents();
 			}
 		} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
@@ -55,7 +54,6 @@ void chx_update_cursor() {
 				chx_draw_header();
 				chx_print_status();
 			} else {
-				chx_draw_header();
 				chx_draw_contents();
 			}
 		}
@@ -87,8 +85,6 @@ void chx_redraw_line(long line) {
 	int cur_y = line - CINST.scroll_pos + TPD;
 	
 	// print row number
-	int rnum_digits = chx_count_digits((CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row - 1);
-	CINST.row_num_len = (rnum_digits < CINST.min_row_num_len) ? CINST.min_row_num_len : rnum_digits;
 	cur_set(0, cur_y);
 	printf(CHX_FRAME_COLOUR"%0*lX \e[0m%-*c", CINST.row_num_len, line_start, CINST.group_spacing, ' ');
 	
@@ -256,6 +252,17 @@ void chx_draw_all() {
 }
 
 void chx_draw_header() {
+	int rnum_digits = chx_count_digits((CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row - 1);
+	int rnl_old = CINST.row_num_len;
+	
+	if (rnum_digits > CINST.min_row_num_len)
+		CINST.row_num_len = rnum_digits;
+	else
+		CINST.row_num_len = CINST.min_row_num_len;
+	
+	if (rnl_old != CINST.row_num_len)
+		chx_draw_all();
+	
 	printf("\e[0;0H%-*c"CHX_FRAME_COLOUR, CINST.row_num_len + CINST.group_spacing, ' ');
 	if (CINST.group_spacing != 0)
 		for (int i = 0; i < CINST.bytes_per_row / CINST.bytes_in_group; i++)
@@ -268,9 +275,6 @@ void chx_draw_header() {
 
 void chx_draw_contents() {
 	// print row numbers
-	int rnum_digits = chx_count_digits((CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row - 1);
-	CINST.row_num_len = (rnum_digits < CINST.min_row_num_len) ? CINST.min_row_num_len : rnum_digits;
-	
 	for (int i = 0; i < CINST.num_rows; i++) {
 		cur_set(0, i + TPD);
 		printf(CHX_FRAME_COLOUR"%0*lX \e[0m%-*c", CINST.row_num_len, (long) ((i + CINST.scroll_pos) * CINST.bytes_per_row), CINST.group_spacing, ' ');
@@ -286,9 +290,10 @@ void chx_draw_contents() {
 		printf(CHX_ASCII_SELECT_FORMAT);
 	
 	for (long i = CINST.scroll_pos * CINST.bytes_per_row; i < CINST.scroll_pos * CINST.bytes_per_row + CINST.num_rows * CINST.bytes_per_row; i++) {
-		if (!(i % CINST.bytes_per_row))
+		if (!(i % CINST.bytes_per_row)) {
+			printf("%-*c", CINST.group_spacing, ' ');
 			cur_set(CINST.row_num_len + CINST.group_spacing, CHX_GET_Y(i));
-		else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
+		} else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
 		
 		if (i < CINST.fdata.len) {
