@@ -188,6 +188,13 @@ long max(long _a, long _b) {
 	return _b;
 }
 
+char* memfork(char* _p, int _l) {
+	char* np = malloc(_l);
+	for (int i = 0; i < _l; i++)
+		np[i] = _p[i];
+	return np;
+}
+
 char* recalloc(char* _p, long _o, long _n) {
 	char* ptr = calloc(1, _n);
 	for (int i = 0; i < min(_o, _n); i++) ptr[i] = _p[i];
@@ -202,6 +209,7 @@ int chx_count_digits(long _n) {
 }
 
 char str_is_num(char* _s) {
+	if (!_s[0]) return 0;
 	for (int i = 0; _s[i]; i++) if (!IS_DIGIT(_s[i])) return 0;
 	return 1;
 }
@@ -251,8 +259,16 @@ char* chx_extract_param(char* _s, int _n) {
 	}
 	
 	// terminate param at first non-typable char or space (' ', '\n', '\t', etc.)
-	for (n = 0; param[n] > 0x20 && param[n] < 0x7F; n++);
-	param[n] = 0;
+	char qf = 0;
+	for (n = 0; param[n] > 0x20 - qf && param[n] < 0x7F; n++)
+		if (IS_QUOTATION(param[n])) qf = !qf;
+	
+	if (IS_QUOTATION(param[0]) && IS_QUOTATION(param[n - 1])) {
+		*(param++ + n - 1) = 0;
+	} else {
+		param[n] = 0;
+	}
+	
 	return param;
 }
 
@@ -317,24 +333,17 @@ void chx_count_instances(char _np, char** _pl) {
 	chx_draw_all();
 }
 
-void chx_config_layout(char _np, char** _pl) {
-	if (_np < 2) return;
-	
-	char* prop_ptr = 0;
-	
-	if (cmp_str("rnl", _pl[0]))
-		prop_ptr = &CINST.min_row_num_len;
-	else if (cmp_str("gs", _pl[0]))
-		prop_ptr = &CINST.group_spacing;
-	else if (cmp_str("bpr", _pl[0]))
-		prop_ptr = &CINST.bytes_per_row;
-	else if (cmp_str("big", _pl[0]))
-		prop_ptr = &CINST.bytes_in_group;
-	
-	if (prop_ptr && str_is_num(_pl[1]))
-		*prop_ptr = (str_to_num(_pl[1])) ? str_to_num(_pl[1]) : 1;
-	
-	cls();
+void chx_open_instance(char _np, char** _pl) {
+	if (!_np) return;
+	chx_add_instance(_pl[0]);
+	chx_draw_all();
+}
+
+void chx_close_instance(char _np, char** _pl) {
+	int inst;
+	if (str_is_num(_pl[0])) inst = str_to_num(_pl[0]);
+	else inst = CHX_SEL_INSTANCE;
+	chx_remove_instance(inst);
 	chx_draw_all();
 }
 
@@ -472,7 +481,25 @@ void chx_save() {
 	fflush(stdout);
 }
 
-void chx_save_as() {
+void chx_save_as(char _np, char** _pl) {
+	if (_np) {
+		free(CINST.fdata.filename);
+		CINST.fdata.filename = memfork(_pl[0], str_len(_pl[0]) + 1);
+	}
+	
+	// remove highlighting for unsaved data
+	for (int i = 0; i < CINST.fdata.len / 8; i++)
+		CINST.style_data[i] = 0;
+	
+	// export file and redraw file contents
+	CINST.saved = 1;
+	chx_export(CINST.fdata.filename);
+	chx_draw_contents();
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+}
+
+void chx_prompt_save_as() {
 	chx_draw_all();
 	
 	// setup user input buffer
@@ -569,6 +596,66 @@ void chx_clear_buffer() {
 	free(CINST.copy_buffer);
 	CINST.copy_buffer = 0;
 	CINST.copy_buffer_len = 0;
+}
+
+void chx_next_inst() {
+	if (CHX_SEL_INSTANCE < CHX_CUR_MAX_INSTANCE) CHX_SEL_INSTANCE++;
+	else CHX_SEL_INSTANCE = 0;
+	chx_draw_all();
+}
+
+void chx_prev_inst() {
+	if (CHX_SEL_INSTANCE > 0) CHX_SEL_INSTANCE--;
+	else CHX_SEL_INSTANCE = CHX_CUR_MAX_INSTANCE;
+	chx_draw_all();
+}
+
+void chx_config_layout(char _np, char** _pl) {
+	if (_np < 2) return;
+	
+	char* prop_ptr = 0;
+	
+	if (cmp_str("rnl", _pl[0]))
+		prop_ptr = &CINST.min_row_num_len;
+	else if (cmp_str("gs", _pl[0]))
+		prop_ptr = &CINST.group_spacing;
+	else if (cmp_str("bpr", _pl[0]))
+		prop_ptr = &CINST.bytes_per_row;
+	else if (cmp_str("big", _pl[0]))
+		prop_ptr = &CINST.bytes_in_group;
+	
+	if (prop_ptr && str_is_num(_pl[1]))
+		*prop_ptr = (str_to_num(_pl[1])) ? str_to_num(_pl[1]) : 1;
+	
+	cls();
+	chx_draw_all();
+}
+
+void chx_config_layout_global(char _np, char** _pl) {
+	for (int i = 0; i < CHX_CUR_MAX_INSTANCE; i++) {
+		chx_config_layout(_np, _pl);
+		chx_next_inst();
+	}
+}
+
+void chx_print_finfo() {
+	// count lines
+	int nlc = 1;
+	int chc = 0;
+	for (int i = 0; i < CINST.fdata.len; i++) {
+		if (IS_PRINTABLE(CINST.fdata.data[i])) chc++;
+		else if (CINST.fdata.data[i] == 0x0A) nlc++;
+	}
+	
+	// print info and for key input to ocntinue
+	cur_set(0, CINST.height);
+	printf("\e[2K'%s' %liB %iL %iC (offset: %#lx)", CINST.fdata.filename, CINST.fdata.len, nlc, chc, CINST.cursor.pos);
+	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+	fflush(stdout);
+	chx_get_char();
+	
+	// redraw elements
+	chx_draw_all();
 }
 
 void chx_remove_selected() {

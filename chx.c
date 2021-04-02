@@ -5,10 +5,7 @@
 struct chx_finfo chx_import(char* fpath) {
 	struct chx_finfo finfo;
 	FILE* inf = fopen(fpath, "r+b");
-	if (!inf) {
-		printf("file \"%s\" not found.\n", fpath);
-		chx_exit();
-	}
+	if (!inf) return (struct chx_finfo) {0};
 	fseek(inf, 0, SEEK_END);
 	long flen = ftell(inf);
 	rewind(inf);
@@ -185,6 +182,7 @@ void chx_print_status() {
 			printf("\e[2K[ UNKNOWN ]");
 			break;
 	}
+	printf(" '%s' (%li bytes)", CINST.fdata.filename, CINST.fdata.len);
 }
 
 void chx_draw_extra() {
@@ -763,37 +761,98 @@ char chx_get_char() {
 }
 
 void chx_get_str(char* _buf, int _len) {
-		// set terminal flags and enter raw mode
-        struct termios old = {0};
-        tcgetattr(0, &old);
-        old.c_lflag &= ~ICANON;
-        old.c_cc[VMIN] = 1;
-        old.c_cc[VTIME] = 0;
-        tcsetattr(0, TCSANOW, &old);
-		
-		for (int i = 0; i < _len; i++) {
-			read(0, _buf + i, 1);
-			switch (_buf[i]) {
-				case 0x7F:
-					if (i-- > 0) {
-						i--;
-						printf("\b \b");
-						fflush(stdout);
-					}
-					break;
-				case 0x0A:
-					return;
-				default:
-					printf("%c", _buf[i]);
-					fflush(stdout);
-					break;
-			}
+	struct chx_key k;
+	for (int bpos = 0; WORD(k) != 0x0A; k = chx_get_key()) {
+		if (WORD(k) == KEY_LEFT && bpos > 0) {
+			bpos--;
+			printf("\e[1D");
+		} else if (WORD(k) == KEY_RIGHT && _buf[bpos]) {
+			bpos++;
+			printf("\e[1C");
+		} else if (WORD(k) == 0x7F && bpos) {
+			bpos--;
+			int n;
+			for (n = bpos; _buf[n]; n++)
+				_buf[n] = _buf[n + 1];
+			printf("\e[1D");
+			for (n = bpos; _buf[n]; n++)
+				printf("%c", _buf[n]);
+			printf("\e[0K");
+			if (n - bpos) printf("\e[%iD", n - bpos);
+			
+		} else if (IS_PRINTABLE(WORD(k))) {
+			int n = 0;
+			while (_buf[n]) n++;
+			for (n++; n > 0; n--)
+				_buf[bpos + n] = _buf[bpos + n - 1];
+			_buf[bpos] = k.val;
+			for (n = bpos; _buf[n]; n++)
+				printf("%c", _buf[n]);
+			printf("\e[0K");
+			printf("\e[%iD", n - bpos);
+			bpos++;
+			printf("\e[1C");
 		}
-        
-		
-		// restore flags and re-enter cooked mode
-        old.c_lflag |= ICANON;
-        tcsetattr(0, TCSADRAIN, &old);
+		fflush(stdout);
+	}
+}
+
+void chx_add_instance(char* fpath) {
+	if (CHX_CUR_MAX_INSTANCE >= CHX_MAX_NUM_INSTANCES - 1) return;
+	
+	// load file
+	struct chx_finfo hdata = chx_import(fpath);
+	if (!hdata.data) return;
+	hdata.filename = memfork(fpath, str_len(fpath) + 1);
+	
+	// get window dimensions
+	struct winsize size;
+	ioctl(0, TIOCGWINSZ, (char*) &size);
+	
+	// setup instance
+	CHX_CUR_MAX_INSTANCE++;
+	CHX_SEL_INSTANCE = CHX_CUR_MAX_INSTANCE;
+	CINST.cursor = (struct CHX_CURSOR) {0, 0};
+	CINST.fdata = hdata;
+	CINST.style_data = calloc(1, hdata.len / 8 + (hdata.len % 8 != 0));
+	CINST.height = size.ws_row;
+	CINST.width = size.ws_col;
+	CINST.x_offset = 0;
+	CINST.y_offset = 0;
+	CINST.bytes_per_row = CHX_BYTES_PER_ROW;
+	CINST.bytes_in_group = CHX_BYTES_IN_GROUP;
+	CINST.group_spacing = CHX_GROUP_SPACING;
+	CINST.min_row_num_len =
+	CINST.row_num_len = CHX_MIN_ROW_NUM_LEN;
+	CINST.num_rows = size.ws_row - PD;
+	CINST.endianness = CHX_DEFAULT_ENDIANNESS;
+	CINST.last_action.action.execute_void = fvoid;
+	CINST.last_action.type = 0;
+	CINST.saved = 1;
+	
+	CINST.show_inspector = (CHX_PREVIEW_END + 28 > CINST.width) ? 0 : CHX_SHOW_INSPECTOR_ON_STARTUP;
+	CINST.show_preview = (CHX_PREVIEW_END > CINST.width) ? 0 : CHX_SHOW_PREVIEW_ON_STARTUP;
+}
+
+void chx_remove_instance(int _n) {
+	if (_n < 0 || _n > CHX_CUR_MAX_INSTANCE || !CHX_CUR_MAX_INSTANCE) return;
+	CHX_CUR_MAX_INSTANCE--;
+	if (CHX_SEL_INSTANCE > CHX_CUR_MAX_INSTANCE)
+		CHX_SEL_INSTANCE = CHX_CUR_MAX_INSTANCE;
+	
+	printf("eS1 c\n");
+	
+	// empty struct
+	if (CHX_INSTANCES[_n].copy_buffer) free(CHX_INSTANCES[_n].copy_buffer);
+	if (CHX_INSTANCES[_n].style_data) free(CHX_INSTANCES[_n].style_data);
+	if (CHX_INSTANCES[_n].fdata.data) free(CHX_INSTANCES[_n].fdata.data);
+	if (CHX_INSTANCES[_n].fdata.filename) free(CHX_INSTANCES[_n].fdata.filename);
+	CHX_INSTANCES[_n] = (struct CHX_INSTANCE) {0};
+	
+	// shift instances to remove spaces
+	for (int i = 0; i < CHX_MAX_NUM_INSTANCES - 1; i++)
+		if (!CHX_INSTANCES[i].style_data)
+			CHX_INSTANCES[i] = CHX_INSTANCES[i + 1];
 }
 
 int main(int argc, char** argv) {
@@ -821,7 +880,11 @@ int main(int argc, char** argv) {
 	
 	// load file
 	struct chx_finfo hdata = chx_import(argv[1]);
-	hdata.filename = argv[1];
+	hdata.filename = memfork(argv[1], str_len(argv[1]) + 1);
+	if (!hdata.data) {
+		printf("file \"%s\" not found.\n", argv[1]);
+		return 1;
+	}
 	
 	// enter new terminal state
 	tenter();
@@ -833,7 +896,11 @@ int main(int argc, char** argv) {
 	old.c_lflag &= ~ECHO;
 	tcsetattr(0, TCSANOW, &old);
 	
+	// setup global instances
+	CHX_INSTANCES = (struct CHX_INSTANCE*) calloc(sizeof(struct CHX_INSTANCE), CHX_MAX_NUM_INSTANCES);
+	
 	// setup initial instance
+	CINST.cursor = (struct CHX_CURSOR) {0, 0};
 	CINST.fdata = hdata;
 	CINST.style_data = calloc(1, hdata.len / 8 + (hdata.len % 8 != 0));
 	CINST.height = size.ws_row;
@@ -875,17 +942,11 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 	
-	// initialize cursor
-	CINST.cursor = (struct CHX_CURSOR) {0, 0};
-	
 	// draw elements
 	chx_draw_all();
 	
 	// call main loop
 	chx_main();
-	
-	// after exiting ask if user would like to save
-	chx_quit();
 	
 	return 0;
 }

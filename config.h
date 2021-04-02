@@ -7,6 +7,7 @@
 #define CHX_DEFAULT_ENDIANNESS CHX_LITTLE_ENDIAN
 #define CHX_SHOW_PREVIEW_ON_STARTUP TRUE // can be overridden if screen is small
 #define CHX_SHOW_INSPECTOR_ON_STARTUP TRUE // can be overridden if screen is small
+#define CHX_MAX_NUM_INSTANCES 8 // max number of files open at a time
 #define CHX_MAX_NUM_PARAMS 8 // max number of parameters for interpreter commands
 
 /* LAYOUT SETTINGS */
@@ -53,7 +54,7 @@ void (*chx_keybinds_global[])(void) = {
 	[CHX_CTRL('r')] = chx_replace_mode_toggle,
 	[CHX_CTRL('e')] = chx_swap_endianness,
 	[CHX_CTRL('s')] = chx_save,
-	[CHX_CTRL('w')] = chx_save_as,
+	[CHX_CTRL('w')] = chx_prompt_save_as,
 	[CHX_CTRL('u')] = chx_revert,
 	[CHX_CTRL('x')] = chx_exit,
 	[CHX_CTRL('q')] = chx_exit,
@@ -62,9 +63,8 @@ void (*chx_keybinds_global[])(void) = {
 	[CHX_ALT('.')] = chx_execute_last_action,
 	[KEY_PG_UP] = chx_page_up,
 	[KEY_PG_DN] = chx_page_down,
-	['^'] = chx_to_line_start,
-	['$'] = chx_to_line_end,
-	[':'] = chx_prompt_command,
+	[CHX_CTRL_M(KEY_PG_UP)] = chx_next_inst,
+	[CHX_CTRL_M(KEY_PG_DN)] = chx_prev_inst,
 };
 
 /* COMMAND MODE KEYBINDS */
@@ -106,16 +106,19 @@ void (*chx_keybinds_mode_command[])(void) = {
 	['r'] = chx_mode_set_replace,
 	['q'] = chx_quit,
 	['.'] = chx_execute_last_action,
+	['^'] = chx_to_line_start,
+	['$'] = chx_to_line_end,
+	[':'] = chx_prompt_command,
 };
 
 /* VOID INTERPRETER COMMANDS */
 struct chx_void_command chx_void_commands[] = {
+	(struct chx_void_command) {chx_print_finfo, "gi"},
 	(struct chx_void_command) {chx_toggle_inspector, "ti"},
 	(struct chx_void_command) {chx_toggle_preview, "tp"},
 	(struct chx_void_command) {chx_swap_endianness, "se"},
-	(struct chx_void_command) {chx_save, "w"},
-	(struct chx_void_command) {chx_save_as, "saveas"},
-	(struct chx_void_command) {chx_save_as, "sav"},
+	(struct chx_void_command) {chx_prompt_save_as, "saveas"},
+	(struct chx_void_command) {chx_prompt_save_as, "sav"},
 	(struct chx_void_command) {chx_exit, "q!"},
 	(struct chx_void_command) {chx_quit, "q"},
 	(struct chx_void_command) {chx_save_and_quit, "wq"},
@@ -126,17 +129,21 @@ struct chx_void_command chx_void_commands[] = {
 
 /* INTERPRETER COMMANDS (WITH PARAMS) */
 struct chx_command chx_commands[] = {
+	(struct chx_command) {chx_save_as, "w"},
+	(struct chx_command) {chx_config_layout_global, "gcfg"},
 	(struct chx_command) {chx_config_layout, "cfg"},
 	(struct chx_command) {chx_count_instances, "count"},
 	(struct chx_command) {chx_count_instances, "c"},
 	(struct chx_command) {chx_find_next, "find"},
 	(struct chx_command) {chx_find_next, "f"},
 	(struct chx_command) {chx_find_next, "/"},
+	(struct chx_command) {chx_open_instance, "open"},
+	(struct chx_command) {chx_close_instance, "close"},
 	(struct chx_command) {0, 0} // do not remove
 };
 
 /* FUNCTIONS TO EXCLUDE FROM ACTION HISTORY */
-void (*func_exceptions[])(void) = {
+void* func_exceptions[] = {
 	chx_cursor_move_up,
 	chx_cursor_move_down,
 	chx_cursor_move_right,
@@ -161,6 +168,8 @@ void (*func_exceptions[])(void) = {
 	chx_remove_hexchar,
 	chx_erase_ascii,
 	chx_remove_ascii,
+	chx_open_instance,
+	chx_close_instance,
 };
 
 /* IMPLEMENT YOUR OWN FUNCTIONS HERE */

@@ -69,6 +69,7 @@
 #define IS_LETTER(C) ((C ^ 0x40) < 26 || (C ^ 0x60) < 26)
 #define IS_CHAR_HEX(C) ((C ^ 0x40) < 7 || (C ^ 0x60) < 7 || (C ^ 0x30) < 10)
 #define IS_DIGIT(C) ((C ^ 0x30) < 10)
+#define IS_QUOTATION(C) (C == '\'' || C == '"')
 
 #define CINST CHX_INSTANCES[CHX_SEL_INSTANCE]
 #define BETWEEN_GE1_L2(X, A, B) (X >= min(A, B) && X < max(A, B))
@@ -91,6 +92,7 @@
 	(byte & 0x01 ? '1' : '0')
 
 #define WORD(X) *((uint16_t*) &X)
+#define DWORD(X) *((uint32_t*) &X)
 #define INT8_AT(X) *((int8_t*) (X))
 #define INT16_AT(X) *((int16_t*) (X))
 #define INT32_AT(X) *((int32_t*) (X))
@@ -168,12 +170,13 @@ struct CHX_INSTANCE {
 	char show_preview;
 };
 
-struct CHX_INSTANCE CHX_INSTANCES[8];
+struct CHX_INSTANCE* CHX_INSTANCES = 0;
+int CHX_CUR_MAX_INSTANCE = 0;
 int CHX_SEL_INSTANCE = 0;
 
 void (*chx_keybinds_global[])(void);
 void (*chx_keybinds_mode_command[])(void);
-void (*func_exceptions[])(void);
+void* func_exceptions[];
 struct chx_command chx_commands[];
 
 void fvoid() {};
@@ -181,6 +184,12 @@ void fvoid() {};
 struct chx_finfo chx_import(char* fpath);
 void chx_export(char* fpath);
 
+void chx_config_layout(char _np, char** _pl);
+void chx_config_layout_global(char _np, char** _pl);
+
+void chx_set_inst(int _n);
+void chx_add_instance(char* fpath);
+void chx_remove_instance(int _n);
 void chx_prompt_command();
 
 struct chx_key chx_get_key();
