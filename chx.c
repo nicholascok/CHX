@@ -242,13 +242,14 @@ void chx_draw_all() {
 	// draw elements
 	chx_draw_header();
 	chx_draw_contents();
-	chx_print_status();
 	
 	if (CINST.show_preview)
 		chx_draw_sidebar();
 	
 	if (CINST.show_inspector)
 		chx_draw_extra();
+	
+	chx_print_status();
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
