@@ -333,6 +333,9 @@ void chx_config_layout(char _np, char** _pl) {
 	
 	if (prop_ptr && str_is_num(_pl[1]))
 		*prop_ptr = (str_to_num(_pl[1])) ? str_to_num(_pl[1]) : 1;
+	
+	cls();
+	chx_draw_all();
 }
 
 void chx_find_next(char _np, char** _pl) {
