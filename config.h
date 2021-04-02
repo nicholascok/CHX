@@ -7,6 +7,7 @@
 #define CHX_DEFAULT_ENDIANNESS CHX_LITTLE_ENDIAN
 #define CHX_SHOW_PREVIEW_ON_STARTUP TRUE // can be overridden if screen is small
 #define CHX_SHOW_INSPECTOR_ON_STARTUP TRUE // can be overridden if screen is small
+#define CHX_MAX_NUM_PARAMS 8 // max number of parameters for interpreter commands
 
 /* LAYOUT SETTINGS */
 #define CHX_FRAME_COLOUR COLOUR_CYAN
@@ -58,6 +59,9 @@ void (*chx_keybinds_global[])(void) = {
 	[CHX_CTRL('q')] = chx_exit,
 	[CHX_CTRL('z')] = chx_quit,
 	[KEY_DELETE] = chx_delete_hexchar,
+	[CHX_ALT('.')] = chx_execute_last_action,
+	[KEY_PG_UP] = chx_page_up,
+	[KEY_PG_DN] = chx_page_down,
 	['^'] = chx_to_line_start,
 	['$'] = chx_to_line_end,
 	[':'] = chx_prompt_command,
@@ -104,19 +108,30 @@ void (*chx_keybinds_mode_command[])(void) = {
 	['.'] = chx_execute_last_action,
 };
 
-/* INTERPRETER COMMANDS */
+/* VOID INTERPRETER COMMANDS */
+struct chx_void_command chx_void_commands[] = {
+	(struct chx_void_command) {chx_toggle_inspector, "ti"},
+	(struct chx_void_command) {chx_toggle_preview, "tp"},
+	(struct chx_void_command) {chx_swap_endianness, "se"},
+	(struct chx_void_command) {chx_save, "w"},
+	(struct chx_void_command) {chx_save_as, "saveas"},
+	(struct chx_void_command) {chx_save_as, "sav"},
+	(struct chx_void_command) {chx_exit, "q!"},
+	(struct chx_void_command) {chx_quit, "q"},
+	(struct chx_void_command) {chx_save_and_quit, "wq"},
+	(struct chx_void_command) {chx_save_and_quit, "x"},
+	(struct chx_void_command) {chx_to_start, "0"},
+	(struct chx_void_command) {0, 0} // do not remove
+};
+
+/* INTERPRETER COMMANDS (WITH PARAMS) */
 struct chx_command chx_commands[] = {
-	(struct chx_command) {chx_toggle_inspector, "ti"},
-	(struct chx_command) {chx_toggle_preview, "tp"},
-	(struct chx_command) {chx_swap_endianness, "se"},
-	(struct chx_command) {chx_save, "w"},
-	(struct chx_command) {chx_save_as, "saveas"},
-	(struct chx_command) {chx_save_as, "sav"},
-	(struct chx_command) {chx_exit, "q!"},
-	(struct chx_command) {chx_quit, "q"},
-	(struct chx_command) {chx_save_and_quit, "wq"},
-	(struct chx_command) {chx_save_and_quit, "x"},
-	(struct chx_command) {chx_to_start, "0"},
+	(struct chx_command) {chx_config_layout, "cfg"},
+	(struct chx_command) {chx_count_instances, "count"},
+	(struct chx_command) {chx_count_instances, "c"},
+	(struct chx_command) {chx_find_next, "find"},
+	(struct chx_command) {chx_find_next, "f"},
+	(struct chx_command) {chx_find_next, "/"},
 	(struct chx_command) {0, 0} // do not remove
 };
 
@@ -130,6 +145,26 @@ void (*func_exceptions[])(void) = {
 	chx_cursor_select_down,
 	chx_cursor_select_right,
 	chx_cursor_select_left,
+	chx_cursor_next_byte,
+	chx_cursor_prev_byte,
 	chx_execute_last_action,
 	chx_prompt_command,
+	chx_mode_set_type_ascii,
+	chx_mode_set_type,
+	chx_mode_set_insert_ascii,
+	chx_mode_set_insert,
+	chx_mode_set_replace_ascii,
+	chx_mode_set_replace,
+	chx_remove_selected,
+	chx_delete_selected,
+	chx_erase_hexchar,
+	chx_remove_hexchar,
+	chx_erase_ascii,
+	chx_remove_ascii,
 };
+
+/* IMPLEMENT YOUR OWN FUNCTIONS HERE */
+// function layout (interpreter command with params): void <my_func>(char <num_params>, char** <param_list>)
+// function layout (keybind / void interpreter command): void <my_func>(void)
+
+

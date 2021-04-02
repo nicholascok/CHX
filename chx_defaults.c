@@ -229,6 +229,33 @@ int str_to_hex(char* _s) {
 	return (total > INT_MAX) ? INT_MAX : total;
 }
 
+int str_len(char* _s) {
+	int c = 0;
+	while (_s[c]) c++;
+	return c;
+}
+
+char cmp_str(char* _a, char* _b) {
+	for (int i = 0; _a[i] || _b[i]; i++)
+		if (_a[i] != _b[i]) return 0;
+	return 1;
+}
+
+char* chx_extract_param(char* _s, int _n) {
+	int n;
+	// extract param
+	char* param = _s;
+	for (int i = 0; i < _n; i++) {
+		for (n = 0; param[n] > 0x20 && param[n] < 0x7F; n++);
+		param += n + 1;
+	}
+	
+	// terminate param at first non-typable char or space (' ', '\n', '\t', etc.)
+	for (n = 0; param[n] > 0x20 && param[n] < 0x7F; n++);
+	param[n] = 0;
+	return param;
+}
+
 void chx_resize_file(long _n) {
 	CINST.fdata.data = recalloc(CINST.fdata.data, CINST.fdata.len, _n);
 	CINST.style_data = recalloc(CINST.style_data, (CINST.fdata.len - 1) / 8 + 1, _n / 8 + 1);
@@ -262,6 +289,95 @@ void chx_to_end() {
 	CINST.scroll_pos = (new_scroll >= 0) ? new_scroll : 0;
 	cls();
 	chx_draw_all();
+}
+
+void chx_count_instances(char _np, char** _pl) {
+	if (!_np) return;
+	int len = str_len(_pl[0]);
+	char* buf = malloc(len + 1);
+	buf[len] = 0;
+	
+	// count instances in file
+	long count = 0;
+	for (long i = 0; i <= CINST.fdata.len - len; i++) {
+		for (int n = 0; n < len; n++)
+			buf[n] = CINST.fdata.data[i + n];
+		if (cmp_str(buf, _pl[0])) count++;
+	}
+	
+	free(buf);
+	
+	// print number of occurances and wait for key input to ocntinue
+	cur_set(0, CINST.height);
+	printf("\e[2Kfound %li occurances of '%s' in file '%s'", count, _pl[0], CINST.fdata.filename);
+	fflush(stdout);
+	chx_get_char();
+	
+	// redraw elements
+	chx_draw_all();
+}
+
+void chx_config_layout(char _np, char** _pl) {
+	if (_np < 2) return;
+	
+	char* prop_ptr = 0;
+	
+	if (cmp_str("rnl", _pl[0]))
+		prop_ptr = &CINST.min_row_num_len;
+	else if (cmp_str("gs", _pl[0]))
+		prop_ptr = &CINST.group_spacing;
+	else if (cmp_str("bpr", _pl[0]))
+		prop_ptr = &CINST.bytes_per_row;
+	else if (cmp_str("big", _pl[0]))
+		prop_ptr = &CINST.bytes_in_group;
+	
+	if (prop_ptr && str_is_num(_pl[1]))
+		*prop_ptr = (str_to_num(_pl[1])) ? str_to_num(_pl[1]) : 1;
+}
+
+void chx_find_next(char _np, char** _pl) {
+	if (!_np) return;
+	int len = str_len(_pl[0]);
+	char* buf = malloc(len + 1);
+	buf[len] = 0;
+	
+	// look for first occurance starting at cursor pos.
+	long b = CINST.cursor.pos + 1;
+	for (long i = 0; !cmp_str(buf, _pl[0]) && i < CINST.fdata.len; i++, b++) {
+		if (b >= CINST.fdata.len) b = 0;
+		for (int n = 0; n < len; n++)
+			buf[n] = CINST.fdata.data[b + n];
+	}
+	
+	free(buf);
+	
+	// update cursor pos to start of occurance
+	CINST.cursor.pos = b - 1;
+	chx_update_cursor();
+}
+
+void chx_page_up() {
+	if (CINST.scroll_pos > 0) {
+		CINST.scroll_pos--;
+		printf("\e[1T");
+		chx_redraw_line(CINST.scroll_pos);
+		chx_redraw_line(CINST.scroll_pos + 1);
+		chx_draw_header();
+		chx_print_status();
+		chx_cursor_move_up();
+	}
+}
+
+void chx_page_down() {
+	if (CINST.scroll_pos + CINST.num_rows < INT_MAX / CINST.bytes_per_row) {
+		CINST.scroll_pos++;
+		printf("\e[1S");
+		chx_redraw_line(CINST.scroll_pos + CINST.num_rows);
+		chx_redraw_line(CINST.scroll_pos + CINST.num_rows - 1);
+		chx_draw_header();
+		chx_print_status();
+		chx_cursor_move_down();
+	}
 }
 
 void chx_toggle_inspector() {
@@ -351,27 +467,6 @@ void chx_save() {
 	fflush(stdout);
 }
 
-char cmp_str(char* _a, char* _b) {
-	for (int i = 0; _a[i] || _b[i]; i++)
-		if (_a[i] != _b[i]) return 0;
-	return 1;
-}
-
-char* chx_extract_param(char* _s, int _n) {
-	int n;
-	// extract param
-	char* param = _s;
-	for (int i = 0; i < _n; i++) {
-		for (n = 0; param[n] > 0x20 && param[n] < 0x7F; n++);
-		param += n + 1;
-	}
-	
-	// terminate param at first non-typable char or space (' ', '\n', '\t', etc.)
-	for (n = 0; param[n] > 0x20 && param[n] < 0x7F; n++);
-	param[n] = 0;
-	return param;
-}
-
 void chx_save_as() {
 	chx_draw_all();
 	
@@ -411,7 +506,10 @@ void chx_copy() {
 }
 
 void chx_execute_last_action() {
-	CINST.last_action();
+	if (CINST.last_action.type)
+		CINST.last_action.action.execute_cmmd(CINST.last_action.num_params, CINST.last_action.params);
+	else
+		CINST.last_action.action.execute_void();
 }
 
 void chx_paste_before() {

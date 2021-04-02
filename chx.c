@@ -361,8 +361,7 @@ void chx_draw_sidebar() {
 
 void chx_prompt_command() {
 	// setup user input buffer
-	char usrin[256];
-	usrin[0] = 0;
+	char* usrin = calloc(1, 256);
 	
 	// command interpreter recieve user input
 	cur_set(0, CINST.height);
@@ -371,49 +370,54 @@ void chx_prompt_command() {
 	
 	chx_get_str(usrin, 256);
 	
-	// null terminate input at first newline
-	char* p0 = chx_extract_param(usrin, 0);
+	// extract command and its parameters
+	char np = 0;
+	char* cmd = chx_extract_param(usrin, 0);
+	char** p = malloc(CHX_MAX_NUM_PARAMS * sizeof(void*));
+	
+	for (int i = 0; i < CHX_MAX_NUM_PARAMS; i++) {
+		p[i] = chx_extract_param(usrin, i + 1);
+		if (p[i][0]) np++;
+	}
 	
 	// lookup entered command and execute procedure
 	// for numbers (decimal or hex, prefixed with '0x') jump to the corresponging byte
-	// also implement cfg command
-	if (p0[0]) {
-		if (str_is_num(p0)) {
-			CINST.cursor.pos = str_to_num(p0);
+	if (cmd[0]) {
+		if (str_is_num(cmd)) {
+			CINST.cursor.pos = str_to_num(cmd);
 			CINST.cursor.sbpos = 0;
 			chx_update_cursor();
 			chx_draw_all();
-		} else if (str_is_hex(p0)) {
-			CINST.cursor.pos = str_to_hex(p0);
+		} else if (str_is_hex(cmd)) {
+			CINST.cursor.pos = str_to_hex(cmd);
 			CINST.cursor.sbpos = 0;
 			chx_update_cursor();
 			chx_draw_all();
-		} else if (cmp_str("cfg", p0)) {
-			char* p1 = chx_extract_param(usrin, 1);
-			char* p2 = chx_extract_param(usrin, 2);
-			char* prop_ptr = 0;
-			
-			if (cmp_str("rnl", p1))
-				prop_ptr = &CINST.min_row_num_len;
-			else if (cmp_str("gs", p1))
-				prop_ptr = &CINST.group_spacing;
-			else if (cmp_str("bpr", p1))
-				prop_ptr = &CINST.bytes_per_row;
-			else if (cmp_str("big", p1))
-				prop_ptr = &CINST.bytes_in_group;
-			
-			if (prop_ptr && str_is_num(p2))
-				*prop_ptr = (str_to_num(p2)) ? str_to_num(p2) : 1;
-		} else
-			for (int i = 0; chx_commands[i].str; i++)
-				if (cmp_str(chx_commands[i].str, p0)) {
-					chx_commands[i].execute();
-					CINST.last_action = chx_commands[i].execute;
+		} else {
+			for (int i = 0; chx_void_commands[i].str; i++)
+				if (cmp_str(chx_void_commands[i].str, cmd)) {
+					chx_void_commands[i].execute();
+					CINST.last_action.action.execute_void = chx_void_commands[i].execute;
+					CINST.last_action.type = 0;
+					break;
 				}
+			
+			for (int i = 0; chx_commands[i].str; i++)
+				if (cmp_str(chx_commands[i].str, cmd)) {
+					chx_commands[i].execute(np, p);
+					free(CINST.last_action.params_raw);
+					free(CINST.last_action.params);
+					CINST.last_action.action.execute_cmmd = chx_commands[i].execute;
+					CINST.last_action.params_raw = usrin;
+					CINST.last_action.num_params = np;
+					CINST.last_action.params = p;
+					CINST.last_action.type = 1;
+					break;
+				}
+		}
 	}
 	
 	// redraw elements
-	cls();
 	chx_draw_all();
 }
 
@@ -646,7 +650,10 @@ void chx_main() {
 			for (int i = 0; i < sizeof(func_exceptions) / sizeof(void*); i++)
 				if (chx_keybinds_global[WORD(key)] == func_exceptions[i])
 					is_valid = 0;
-			if (is_valid) CINST.last_action = chx_keybinds_global[WORD(key)];
+			if (is_valid) {
+				CINST.last_action.action.execute_void = chx_keybinds_global[WORD(key)];
+				CINST.last_action.type = 0;
+			}
 		}
 		
 		switch (CINST.mode) {
@@ -661,7 +668,10 @@ void chx_main() {
 					for (int i = 0; i < sizeof(func_exceptions) / sizeof(void*); i++)
 						if (chx_keybinds_mode_command[WORD(key)] == func_exceptions[i])
 							is_valid = 0;
-					if (is_valid) CINST.last_action = chx_keybinds_mode_command[WORD(key)];
+					if (is_valid) {
+						CINST.last_action.action.execute_void = chx_keybinds_mode_command[WORD(key)];
+						CINST.last_action.type = 0;
+					}
 				}
 				break;
 			case CHX_MODE_INSERT:
@@ -836,7 +846,8 @@ int main(int argc, char** argv) {
 	CINST.row_num_len = CHX_MIN_ROW_NUM_LEN;
 	CINST.num_rows = size.ws_row - PD;
 	CINST.endianness = CHX_DEFAULT_ENDIANNESS;
-	CINST.last_action = fvoid;
+	CINST.last_action.action.execute_void = fvoid;
+	CINST.last_action.type = 0;
 	CINST.saved = 1;
 	
 	// only show preview or inspector if it will fit on the screen

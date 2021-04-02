@@ -101,8 +101,26 @@
 #define UINT64_AT(X) *((uint64_t*) (X))
 #define WCHAR_AT(X) (wchar_t) *((int16_t*) (X))
 
-struct chx_command {
+union chx_last_action_ptr {
+	void (*execute_void)(void);
+	void (*execute_cmmd)(char _np, char** _pl);
+};
+
+struct chx_last_action {
+	union chx_last_action_ptr action;
+	char* params_raw;
+	char** params;
+	char num_params;
+	char type;
+};
+
+struct chx_void_command {
 	void (*execute)(void);
+	char* str;
+};
+
+struct chx_command {
+	void (*execute)(char _np, char** _pl);
 	char* str;
 };
 
@@ -127,7 +145,7 @@ struct CHX_INSTANCE {
 	char* copy_buffer;
 	struct chx_finfo fdata;
 	struct CHX_CURSOR cursor;
-	void (*last_action)(void);
+	struct chx_last_action last_action;
 	char bytes_per_row;
 	char bytes_in_group;
 	char group_spacing;
