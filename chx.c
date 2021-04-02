@@ -842,6 +842,20 @@ int main(int argc, char** argv) {
 		CINST.bytes_per_row--;
 	}
 	
+	// alert user if application cannot be functionally operated
+	if (CINST.num_rows < 2 || !CINST.bytes_per_row) {
+		// re-enable key echoing
+		struct termios old = {0};
+		tcgetattr(0, &old);
+		old.c_lflag |= ECHO;
+		tcsetattr(0, TCSADRAIN, &old);
+		
+		// exit
+		texit();
+		printf("terminal is too small to run application.\n");
+		return 0;
+	}
+	
 	// initialize cursor
 	CINST.cursor = (struct CHX_CURSOR) {0, 0};
 	
