@@ -584,8 +584,8 @@ void chx_remove_selected() {
 				CINST.fdata.data[i - sel_size] = CINST.fdata.data[i];
 			chx_resize_file(CINST.fdata.len - sel_size);
 		}
-		CINST.cursor.pos = (sel_begin > 0) ? sel_begin - 1 : 0;
-		CINST.cursor.sbpos = 1;
+		CINST.cursor.pos = (sel_begin > 0) ? sel_begin : 0;
+		CINST.cursor.sbpos = 0;
 		chx_clear_selection();
 		chx_draw_all();
 	}
