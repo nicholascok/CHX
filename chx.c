@@ -198,6 +198,11 @@ void chx_draw_extra() {
 	
 	int offset = (CINST.show_preview) ? CHX_PREVIEW_END : CHX_CONTENT_END;
 	
+	// clear bit of screen
+	cur_set(offset - 1, 0);
+	for (int i = 0; i < CINST.num_rows + PD; i++)
+		printf("\e[0K\e[%dG\e[1B", offset);
+	
 	// print inspected data
 	cur_set(offset, 0);
 	printf("\e[1m");
@@ -230,8 +235,7 @@ void chx_draw_extra() {
 	printf("\e[%dG\e[1B\e[0K\e[1B ", offset);
 	if (CINST.endianness) printf("\e[0K[LITTLE ENDIAN]");
 	else printf("\e[0K[BIG ENDIAN]");
-	for (int i = 14; i < CINST.num_rows; i++)
-		printf("\e[%dG\e[1B\e[0K\e[0m", offset);
+	printf("\e[0m");
 }
 
 void chx_draw_all() {
@@ -264,12 +268,8 @@ void chx_draw_header() {
 		chx_draw_all();
 	
 	printf("\e[0;0H%-*c"CHX_FRAME_COLOUR, CINST.row_num_len + CINST.group_spacing, ' ');
-	if (CINST.group_spacing != 0)
-		for (int i = 0; i < CINST.bytes_per_row / CINST.bytes_in_group; i++)
-			printf("%02X%-*c", i * CINST.bytes_in_group, CINST.bytes_in_group * 2 + CINST.group_spacing - 2, ' ');
-	else 
-		for (int i = 0; i < CINST.bytes_per_row / CINST.bytes_in_group; i++)
-			printf("%02X", i * CINST.bytes_in_group);
+	for (int i = 0; i < CINST.bytes_per_row / CINST.bytes_in_group; i++)
+		printf("%02X%-*c", i * CINST.bytes_in_group, CINST.bytes_in_group * 2 + CINST.group_spacing - 2, ' ');
 	printf("\e[0m");
 }
 
@@ -315,6 +315,13 @@ void chx_draw_contents() {
 }
 
 void chx_draw_sidebar() {
+	// clear bit of screen if inspector is off
+	if (!CINST.show_inspector) {
+		cur_set(CHX_CONTENT_END, 0);
+		for (int i = 0; i < CINST.num_rows + PD; i++)
+			printf("\e[0K\e[%dG\e[1B", CHX_CONTENT_END);
+	}
+	
 	cur_set(CHX_CONTENT_END, 0);
 	printf("%-*c", CINST.bytes_per_row, ' ');
 	
@@ -396,7 +403,7 @@ void chx_prompt_command() {
 				prop_ptr = &CINST.bytes_in_group;
 			
 			if (prop_ptr && str_is_num(p2))
-				*prop_ptr = str_to_num(p2);
+				*prop_ptr = (str_to_num(p2)) ? str_to_num(p2) : 1;
 		} else
 			for (int i = 0; chx_commands[i].str; i++)
 				if (cmp_str(chx_commands[i].str, p0)) {
