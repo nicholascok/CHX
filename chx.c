@@ -101,10 +101,10 @@ void chx_redraw_line(long line) {
 		if (i != line_start && !(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
 		
+		if (CINST.selected && i == sel_begin && sel_end != sel_begin)
+			printf(CHX_ASCII_SELECT_FORMAT);
+		
 		if (i < CINST.fdata.len) {
-			if (CINST.selected && i == sel_begin && sel_end != sel_begin)
-				printf(CHX_ASCII_SELECT_FORMAT);
-			
 			if ((!CINST.selected || i < sel_begin || i >= sel_end) && CINST.style_data[i / 8] & (0x80 >> (i % 8)))
 				printf(CHX_UNSAVED_COLOUR"%02X\e[0m", CINST.fdata.data[i]);
 			else
@@ -297,10 +297,10 @@ void chx_draw_contents() {
 		} else if (!(i % CINST.bytes_in_group) && CINST.group_spacing != 0)
 			printf("%-*c", CINST.group_spacing, ' ');
 		
+		if (CINST.selected && i == sel_begin && sel_end != sel_begin)
+			printf(CHX_ASCII_SELECT_FORMAT);
+		
 		if (i < CINST.fdata.len) {
-			if (CINST.selected && i == sel_begin && sel_end != sel_begin)
-				printf(CHX_ASCII_SELECT_FORMAT);
-			
 			if ((!CINST.selected || i < sel_begin || i >= sel_end) && CINST.style_data[i / 8] & (0x80 >> (i % 8)))
 				printf(CHX_UNSAVED_COLOUR"%02X\e[0m", CINST.fdata.data[i]);
 			else
