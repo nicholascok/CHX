@@ -382,11 +382,13 @@ void chx_page_down() {
 
 void chx_toggle_inspector() {
 	CINST.show_inspector = !CINST.show_inspector;
+	cls();
 	chx_draw_all();
 }
 
 void chx_toggle_preview() {
 	CINST.show_preview = !CINST.show_preview;
+	cls();
 	chx_draw_all();
 }
 
