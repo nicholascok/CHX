@@ -792,6 +792,10 @@ void chx_get_str(char* _buf, int _len) {
 			printf("\e[%iD", n - bpos);
 			bpos++;
 			printf("\e[1C");
+		} else if (WORD(k) == KEY_ESCAPE) {
+			for (int i = 0; _buf[i]; i++)
+				_buf[i] = 0;
+			return;
 		}
 		fflush(stdout);
 	}
