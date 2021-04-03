@@ -152,6 +152,6 @@ usage: `chx <filepath>`
   Then, add it to the list of interpreter commands in config.h using the following syntax:  
   `(struct chx_command) {<func_ptr>, "<command_str>"},`  
   
-## Elclusion List
+## Exclusion List
   By default, CHX stors the function pointer of your previous action (function called by key press or interpreter command entered).
   To exclude a function from being set as your last action, add it to the exclusion list in config.h.
