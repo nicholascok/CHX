@@ -1,6 +1,7 @@
 #ifndef __CHX_CAOIMH__
 #define __CHX_CAOIMH__
 
+#include <signal.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <malloc.h>
@@ -187,7 +188,6 @@ void chx_export(char* fpath);
 void chx_config_layout(char _np, char** _pl);
 void chx_config_layout_global(char _np, char** _pl);
 
-void chx_set_inst(int _n);
 void chx_add_instance(char* fpath);
 void chx_remove_instance(int _n);
 void chx_prompt_command();

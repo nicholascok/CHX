@@ -323,7 +323,7 @@ void chx_count_instances(char _np, char** _pl) {
 	
 	free(buf);
 	
-	// print number of occurances and wait for key input to ocntinue
+	// print number of occurances and wait for key input to continue
 	cur_set(0, CINST.height);
 	printf("\e[2Kfound %li occurances of '%s' in file '%s'", count, _pl[0], CINST.fdata.filename);
 	fflush(stdout);
@@ -336,7 +336,9 @@ void chx_count_instances(char _np, char** _pl) {
 void chx_open_instance(char _np, char** _pl) {
 	if (!_np) return;
 	chx_add_instance(_pl[0]);
+	printf("|||\n");
 	chx_draw_all();
+	printf("|||\n");
 }
 
 void chx_close_instance(char _np, char** _pl) {
@@ -507,7 +509,7 @@ void chx_prompt_save_as() {
 	
 	// print save dialoge and recieve user input
 	cur_set(0, CINST.height);
-	printf("SAVE AS? (LEAVE EMPTY TO CANCEL): ");
+	printf("\e[2KSAVE AS? (LEAVE EMPTY TO CANCEL): ");
 	fflush(stdout);
 	
 	chx_get_str(usrin, 256);
@@ -598,6 +600,14 @@ void chx_clear_buffer() {
 	CINST.copy_buffer_len = 0;
 }
 
+void chx_set_inst(char _np, char** _pl) {
+	if (!str_is_num(_pl[0])) return;
+	int inst = str_to_num(_pl[0]);
+	if (inst <= CHX_CUR_MAX_INSTANCE && inst >= 0)
+		CHX_SEL_INSTANCE = inst;
+	chx_draw_all();
+}
+
 void chx_next_inst() {
 	if (CHX_SEL_INSTANCE < CHX_CUR_MAX_INSTANCE) CHX_SEL_INSTANCE++;
 	else CHX_SEL_INSTANCE = 0;
@@ -632,7 +642,7 @@ void chx_config_layout(char _np, char** _pl) {
 }
 
 void chx_config_layout_global(char _np, char** _pl) {
-	for (int i = 0; i < CHX_CUR_MAX_INSTANCE; i++) {
+	for (int i = 0; i <= CHX_CUR_MAX_INSTANCE; i++) {
 		chx_config_layout(_np, _pl);
 		chx_next_inst();
 	}
@@ -708,7 +718,7 @@ void chx_quit() {
 	// ask user if they would like to save
 	if (!CINST.saved) {
 		cur_set(0, CINST.height);
-		printf("WOULD YOU LIKE TO SAVE? (Y / N): ");
+		printf("\e[2KWOULD YOU LIKE TO SAVE? (Y / N): ");
 		fflush(stdout);
 		
 		switch (chx_get_char()) {

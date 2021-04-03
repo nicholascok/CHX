@@ -182,7 +182,7 @@ void chx_print_status() {
 			printf("\e[2K[ UNKNOWN ]");
 			break;
 	}
-	printf(" '%s' (%li bytes)", CINST.fdata.filename, CINST.fdata.len);
+	printf(" I%02i '%s' (%li bytes)", CHX_SEL_INSTANCE, CINST.fdata.filename, CINST.fdata.len);
 }
 
 void chx_draw_extra() {
@@ -802,7 +802,14 @@ void chx_add_instance(char* fpath) {
 	
 	// load file
 	struct chx_finfo hdata = chx_import(fpath);
-	if (!hdata.data) return;
+	if (!hdata.data) {
+		// alert user file could not be found and wait for key input to continue
+		cur_set(0, CINST.height);
+		printf("\e[2Kfile '%s' not found.", fpath);
+		fflush(stdout);
+		chx_get_char();
+		return;
+	};
 	hdata.filename = memfork(fpath, str_len(fpath) + 1);
 	
 	// get window dimensions
@@ -827,7 +834,10 @@ void chx_add_instance(char* fpath) {
 	CINST.num_rows = size.ws_row - PD;
 	CINST.endianness = CHX_DEFAULT_ENDIANNESS;
 	CINST.last_action.action.execute_void = fvoid;
+	CINST.last_action.params = NULL;
+	CINST.last_action.params_raw = NULL;
 	CINST.last_action.type = 0;
+	CINST.copy_buffer = NULL;
 	CINST.saved = 1;
 	
 	CINST.show_inspector = (CHX_PREVIEW_END + 28 > CINST.width) ? 0 : CHX_SHOW_INSPECTOR_ON_STARTUP;
@@ -843,10 +853,10 @@ void chx_remove_instance(int _n) {
 	printf("eS1 c\n");
 	
 	// empty struct
-	if (CHX_INSTANCES[_n].copy_buffer) free(CHX_INSTANCES[_n].copy_buffer);
-	if (CHX_INSTANCES[_n].style_data) free(CHX_INSTANCES[_n].style_data);
-	if (CHX_INSTANCES[_n].fdata.data) free(CHX_INSTANCES[_n].fdata.data);
-	if (CHX_INSTANCES[_n].fdata.filename) free(CHX_INSTANCES[_n].fdata.filename);
+	free(CHX_INSTANCES[_n].copy_buffer);
+	free(CHX_INSTANCES[_n].style_data);
+	free(CHX_INSTANCES[_n].fdata.data);
+	free(CHX_INSTANCES[_n].fdata.filename);
 	CHX_INSTANCES[_n] = (struct CHX_INSTANCE) {0};
 	
 	// shift instances to remove spaces
@@ -896,6 +906,10 @@ int main(int argc, char** argv) {
 	old.c_lflag &= ~ECHO;
 	tcsetattr(0, TCSANOW, &old);
 	
+	// override ctrl+z/ctrl+c termination
+	signal(SIGINT, chx_quit);
+	signal(SIGTSTP, chx_quit);
+	
 	// setup global instances
 	CHX_INSTANCES = (struct CHX_INSTANCE*) calloc(sizeof(struct CHX_INSTANCE), CHX_MAX_NUM_INSTANCES);
 	
@@ -915,7 +929,10 @@ int main(int argc, char** argv) {
 	CINST.num_rows = size.ws_row - PD;
 	CINST.endianness = CHX_DEFAULT_ENDIANNESS;
 	CINST.last_action.action.execute_void = fvoid;
+	CINST.last_action.params = NULL;
+	CINST.last_action.params_raw = NULL;
 	CINST.last_action.type = 0;
+	CINST.copy_buffer = NULL;
 	CINST.saved = 1;
 	
 	// only show preview or inspector if it will fit on the screen
