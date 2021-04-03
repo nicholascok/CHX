@@ -46,7 +46,7 @@ usage: `chx <filepath>`
   | ctrl + e | toggle endianness |
   | ctrl + w | open save-as dialoge |
   | ctrl + u | revert all unsaved changes |
-  | ctrl + q | exit the program, discarding any unsaved changes |
+  | ctrl + x | exit the program, discarding any unsaved changes |
   | delete | replaces the hex char at the cursor position with 0 |
   | page up | scrolls the file contents up |
   | page down | scrolls the file contents down |
@@ -69,6 +69,7 @@ usage: `chx <filepath>`
   | shift + d | remove selection, shift file contents |
   | u | revert all unsaved changes |
   | q | quit program, prompt if there are any unsaved changes |
+  | . | repeat last action |
   | ^ | move cursor to start of line |
   | $ | move cursor to end of line |
   | : | open command interpreter |
@@ -80,12 +81,13 @@ usage: `chx <filepath>`
   | `open <filepath>` | `o` | opens a new file and switches to the instance. |
   | `close <instance_num>` | `c` | closes the specified instance: if no instance is specified, the current instance is closed. |
   | `to <instance_num>` | none | switches to the specified instance. |
+  | `switch <filepath>` | `sw`, `s` | opens the specified filepath, replacing the current instance. |
   | `find <string>` | `f`, `/` | moves the cursor to the next occurance of the specified string. |
   | `count <string>` | `cnt` | counts the number of occurances of the specified string in the file. |
   | `save <new_filename>` | `w` | saves the file under the specified filename: if no filename is specified, the filename is not changed. |
   | `se` | none | toggles between big and little endian interpretations of data. |
-  | `ti` | none | toggles the visibility of the data inspector. |
-  | `tp` | none | toggles the visibility of the ASCII preview. |
+  | `ti` | none | toggles data inspector visibility. |
+  | `tp` | none | toggles ASCII preview visibility. |
   | `exit` | `q!` | exits the program without saving. |
   | `quit` | `q` | if there are unsaved changes in the file, the user is prompted to save the current instance first, then exits the program. |
   | `wq` | none | saves the current instance and exits the program. |
