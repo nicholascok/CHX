@@ -336,9 +336,7 @@ void chx_count_instances(char _np, char** _pl) {
 void chx_open_instance(char _np, char** _pl) {
 	if (!_np) return;
 	chx_add_instance(_pl[0]);
-	printf("|||\n");
 	chx_draw_all();
-	printf("|||\n");
 }
 
 void chx_close_instance(char _np, char** _pl) {

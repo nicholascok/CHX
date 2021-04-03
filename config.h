@@ -118,8 +118,9 @@ struct chx_void_command chx_void_commands[] = {
 	(struct chx_void_command) {chx_toggle_preview, "tp"},
 	(struct chx_void_command) {chx_swap_endianness, "se"},
 	(struct chx_void_command) {chx_prompt_save_as, "saveas"},
-	(struct chx_void_command) {chx_prompt_save_as, "sav"},
+	(struct chx_void_command) {chx_exit, "exit"},
 	(struct chx_void_command) {chx_exit, "q!"},
+	(struct chx_void_command) {chx_quit, "quit"},
 	(struct chx_void_command) {chx_quit, "q"},
 	(struct chx_void_command) {chx_save_and_quit, "wq"},
 	(struct chx_void_command) {chx_to_start, "0"},
@@ -129,6 +130,8 @@ struct chx_void_command chx_void_commands[] = {
 /* INTERPRETER COMMANDS (WITH PARAMS) */
 struct chx_command chx_commands[] = {
 	(struct chx_command) {chx_set_inst, "to"},
+	(struct chx_command) {chx_save_as, "save"},
+	(struct chx_command) {chx_save_as, "sav"},
 	(struct chx_command) {chx_save_as, "w"},
 	(struct chx_command) {chx_config_layout_global, "gcfg"},
 	(struct chx_command) {chx_config_layout, "cfg"},
