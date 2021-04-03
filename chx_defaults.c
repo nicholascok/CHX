@@ -333,6 +333,34 @@ void chx_count_instances(char _np, char** _pl) {
 	chx_draw_all();
 }
 
+void chx_switch_file(char _np, char** _pl) {
+	if (!_np) return;
+	
+	// load file
+	struct chx_finfo hdata = chx_import(_pl[0]);
+	if (!hdata.data) {
+		// alert user file could not be found and wait for key input to continue
+		cur_set(0, CINST.height);
+		printf("\e[2Kfile '%s' not found.", _pl[0]);
+		fflush(stdout);
+		chx_get_char();
+		return;
+	};
+	hdata.filename = memfork(_pl[0], str_len(_pl[0]) + 1);
+	
+	// update instance
+	free(CINST.fdata.filename);
+	CINST.fdata = hdata;
+	CINST.saved = 1;
+	
+	// remove highlighting for unsaved data
+	free(CINST.style_data);
+	CINST.style_data = calloc(1, CINST.fdata.len / 8 + (CINST.fdata.len % 8 != 0));
+	
+	// redraw elements
+	chx_draw_all();
+}
+
 void chx_open_instance(char _np, char** _pl) {
 	if (!_np) return;
 	chx_add_instance(_pl[0]);
