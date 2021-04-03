@@ -26,6 +26,12 @@
 #define CHX_RESIZE_FILE_ON_BACKSPACE
 #define CHX_RESIZE_FILE_ON_INSERTION
 
+/* IMPLEMENT / INCLUDE YOUR OWN FUNCTIONS HERE */
+// function layout (interpreter command with params): void <my_func>(char <num_params>, char** <param_list>)
+// function layout (keybind / void interpreter command): void <my_func>(void)
+
+
+
 /* GLOBAL KEYBINDS (WORK IN ANY MODE) */
 void (*chx_keybinds_global[])(void) = {
 	[KEY_MAX_VAL] = fvoid, // do not remove
@@ -178,9 +184,5 @@ void* func_exceptions[] = {
 	chx_set_inst,
 	chx_switch_file,
 };
-
-/* IMPLEMENT YOUR OWN FUNCTIONS HERE */
-// function layout (interpreter command with params): void <my_func>(char <num_params>, char** <param_list>)
-// function layout (keybind / void interpreter command): void <my_func>(void)
 
 
