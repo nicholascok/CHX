@@ -34,22 +34,30 @@ void chx_update_cursor() {
 		if (CINST.cursor.pos >= (CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row) {
 			CINST.scroll_pos = CINST.cursor.pos / CINST.bytes_per_row - CINST.num_rows + 1;
 			if (CINST.scroll_pos < spo + CINST.num_rows) {
-				printf("\e[%liS", CINST.scroll_pos - spo);
-				for (int i = spo; i < CINST.scroll_pos; i++)
-					chx_redraw_line(i + CINST.num_rows);
-				chx_draw_header();
-				chx_print_status();
+				#ifdef CHX_SCROLL_SUPPORT
+					printf("\e[%liS", CINST.scroll_pos - spo);
+					for (int i = spo; i < CINST.scroll_pos; i++)
+						chx_redraw_line(i + CINST.num_rows);
+					chx_draw_header();
+					chx_print_status();
+				#else
+					chx_draw_contents();
+				#endif
 			} else {
 				chx_draw_contents();
 			}
 		} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
 			CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
 			if (spo < CINST.scroll_pos + CINST.num_rows) {
-				printf("\e[%liT", spo - CINST.scroll_pos);
-				for (int i = CINST.scroll_pos; i < spo; i++)
-					chx_redraw_line(i);
-				chx_draw_header();
-				chx_print_status();
+				#ifdef CHX_SCROLL_SUPPORT
+					printf("\e[%liT", spo - CINST.scroll_pos);
+					for (int i = CINST.scroll_pos; i < spo; i++)
+						chx_redraw_line(i);
+					chx_draw_header();
+					chx_print_status();
+				#else
+					chx_draw_contents();
+				#endif
 			} else {
 				chx_draw_contents();
 			}

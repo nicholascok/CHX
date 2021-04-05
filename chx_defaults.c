@@ -170,6 +170,7 @@ void chx_exit() {
 	tcsetattr(0, TCSADRAIN, &old);
 	
 	// exit
+	cls();
 	texit();
 	exit(0);
 }
@@ -399,11 +400,15 @@ void chx_find_next(char _np, char** _pl) {
 void chx_page_up() {
 	if (CINST.scroll_pos > 0) {
 		CINST.scroll_pos--;
-		printf("\e[1T");
-		chx_redraw_line(CINST.scroll_pos);
-		chx_redraw_line(CINST.scroll_pos + 1);
-		chx_draw_header();
-		chx_print_status();
+		#ifdef CHX_SCROLL_SUPPORT
+			printf("\e[1T");
+			chx_redraw_line(CINST.scroll_pos + CINST.num_rows);
+			chx_redraw_line(CINST.scroll_pos + CINST.num_rows + 1);
+			chx_draw_header();
+			chx_print_status();
+		#else
+			chx_draw_contents();
+		#endif
 		chx_cursor_move_up();
 	}
 }
@@ -411,11 +416,15 @@ void chx_page_up() {
 void chx_page_down() {
 	if (CINST.scroll_pos + CINST.num_rows < INT_MAX / CINST.bytes_per_row) {
 		CINST.scroll_pos++;
-		printf("\e[1S");
-		chx_redraw_line(CINST.scroll_pos + CINST.num_rows);
-		chx_redraw_line(CINST.scroll_pos + CINST.num_rows - 1);
-		chx_draw_header();
-		chx_print_status();
+		#ifdef CHX_SCROLL_SUPPORT
+			printf("\e[1S");
+			chx_redraw_line(CINST.scroll_pos + CINST.num_rows);
+			chx_redraw_line(CINST.scroll_pos + CINST.num_rows - 1);
+			chx_draw_header();
+			chx_print_status();
+		#else
+			chx_draw_contents();
+		#endif
 		chx_cursor_move_down();
 	}
 }
