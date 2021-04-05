@@ -171,6 +171,7 @@ void chx_exit() {
 	
 	// exit
 	cls();
+	cur_set(0, 0);
 	texit();
 	exit(0);
 }
