@@ -277,7 +277,7 @@ int str_to_num(char* _s) {
 	return total;
 }
 
-int str_to_hex(char* _s) {
+long str_to_hex(char* _s) {
 	long total = 0;
 	for (int i = 2; _s[i]; i++) {
 		total *= 16;
