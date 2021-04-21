@@ -3,7 +3,7 @@ A lightweight terminal hex editor.
 usage: `chx <filepath>`
 
 ## Example
-<kbd><img src="./resources/capture.webp" /></kbd>
+![screenshot of chx running on ubuntu VM](./resources/capture.webp "YOOOOOOOOO")
 
 ## Default Implementations
   ### Instances
