@@ -11,6 +11,7 @@ all: build
 
 build:
 	@echo "building..."
+	mkdir -p ./build
 	$(CC) -o $(TARGET_DIR)/chx $(HEADERS) $(OBJS) $(CC_FLAGS)
 
 install:
@@ -18,4 +19,5 @@ install:
 
 clean:
 	@echo "cleaning build directory..."
+	mkdir -p ./build
 	rm -r ./build/*
