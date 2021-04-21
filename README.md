@@ -1,6 +1,7 @@
 # CHX
 A lightweight terminal hex editor.  
 usage: `chx <filepath>`
+![screenshot of chx running on ubuntu VM](./resources/capture.webp "YOOOOOOOOO")
 
 ## Default Implementations
   ### Instances
