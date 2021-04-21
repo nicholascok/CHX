@@ -19,5 +19,4 @@ install:
 
 clean:
 	@echo "cleaning build directory..."
-	mkdir -p ./build
 	rm -r ./build/*
