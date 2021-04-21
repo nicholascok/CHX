@@ -4,13 +4,13 @@ usage: `chx <filepath>`
 
 ## Default Implementations
   ### Instances
-  CHX supports the ability to have several files open at once. Each open file is referred to as an instance. To open a new file within CHX use the interpreter command `open`, to close an instance, use the interpreter command `close`, and to switch to an instance, use the interpreter command `to` (see Interpreter Commands). The next and previous instances can be accessed by ctrl + page up / ctrl + page down, respectively.
+  CHX supports the ability to have several files open at once. Each open file is referred to as an instance. To create a new instance within CHX use the interpreter command `open`, and to close an instance, use the interpreter command `close`. To switch to an instance, use the interpreter command `to` (see Interpreter Commands). The next and previous instances can be accessed by ctrl + page up / ctrl + page down, respectively.
   
   ### Typing Modes
   | Mode          | Default Keybinding | Valid Characters | Description |
   |:-------------:|:------------------:|:----------------:|:------------|
   | **INSERT**        | I                  | Hex Characters   | characters are inserted into the file. by default, this will shift the rest of the file contents and change the filesize. (this can be disabled, if desired, in which case, inserting into the file results in data 'falling off' the end of the file, and deleting from the file results in data at the end of the file being filled with zeros) |
-  | **ASCII INSERT**  | SHIFT + I          | All Characters   | characters are inserted into the file. Like with INSERT mode, this shifts the file contents and changes the filesize. However, unlike INSERT mode, this behaviour cannot be changed in the config. |
+  | **ASCII INSERT**  | SHIFT + I          | All Characters   | characters are inserted into the file. Like with INSERT mode, this shifts the file contents and changes the filesize. However, unlike INSERT mode, this behaviour cannot be changed. |
   | **REPLACE**       | R                  | Hex Characters   | characters overwrite file content, typing does not move the cursor. deleting from the file is the same as replacing with zeros. |
   | **ASCII REPLACE** | SHIFT + R          | All Characters   | characters overwrite file content, typing does not move the cursor. deleting from the file is the same as replacing with zeros. |
   | **TYPE**          | T                  | Hex Characters   | characters overwrite file content, typing moves the cursor. deleting from the file fills the void with zeros. |
@@ -53,6 +53,8 @@ usage: `chx <filepath>`
   | ctrl + page up | switches to subsequent instance |
   | ctrl + page down | switches to previous instance |
   
+  Note: HJKL also work in place of the arrow keys. in lite versions of CHX, HJKL must be used for selecting, and arrow keys work as the ctrl versions do here.
+  
   | Command Mode Keybindings     |                |
   |:-----------------------------|:---------------|
   | **Keybinding**               | **Decription** |
@@ -75,7 +77,7 @@ usage: `chx <filepath>`
   | : | open command interpreter |
   
   ### Interpreter Commands
-  If a decimal number or hex offset (prefixed with 0x) is entered into the interpreter, the cursor jumps to that byte, otherwise the command is searched for in the lsit of interpreter commands, void first.
+  If a decimal number or hex offset (prefixed with 0x) is entered into the interpreter, the cursor jumps to that byte, otherwise the command is searched for in the list of interpreter commands, void first.
   | Command | Alias(es) | Description |
   |:--------|:--------|:------------|
   | `open <filepath>` | `o` | opens a new file and switches to the instance. |
@@ -85,6 +87,7 @@ usage: `chx <filepath>`
   | `find <string>` | `f`, `/` | moves the cursor to the next occurance of the specified string. |
   | `count <string>` | `cnt` | counts the number of occurances of the specified string in the file. |
   | `save <new_filename>` | `w` | saves the file under the specified filename: if no filename is specified, the filename is not changed. |
+  | `ge <'l' or 'b'>` | none | globally sets the endianness of all open files. |
   | `se` | none | toggles between big and little endian interpretations of data. |
   | `ti` | none | toggles data inspector visibility. |
   | `tp` | none | toggles ASCII preview visibility. |
@@ -93,7 +96,7 @@ usage: `chx <filepath>`
   | `wq` | none | saves the current instance and exits the program. |
   
   ### Editing the Layout of CHX
-  There are a number of options that can be changed in config.h; many of htese options can also be changed live from within chx through the use of the `cfg` and `gcfg` interpreter commands. The `cfg` command affects the layout of the current instance and the `gcfg` command affects the layout of all currently open instances. The format of both commands is the same, and outlines as follows:  
+  There are a number of options that can be changed in config.h; many of these options can also be changed live from within chx through the use of the `cfg` and `gcfg` interpreter commands. The `cfg` command affects the layout of the current instance and the `gcfg` command affects the layout of all currently open instances. The format of both commands is the same, and outlined below:  
   `cfg <property> <value>`  
   There are currently four properties that can be cahnged from within CHX:
   | Property Name | Reference | Default Value | Description|
@@ -155,5 +158,5 @@ usage: `chx <filepath>`
   `(struct chx_command) {<func_ptr>, "<command_str>"},`  
   
 ## Exclusion List
-  By default, CHX stors the function pointer of your previous action (function called by key press or interpreter command entered).
+  By default, CHX stores the function pointer of your previous action (function called by key press or interpreter command entered).
   To exclude a function from being set as your last action, add it to the exclusion list in config.h.
