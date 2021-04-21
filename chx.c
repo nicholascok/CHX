@@ -22,45 +22,48 @@ void chx_export(char* fpath) {
 	fclose(outf);
 }
 
+void chx_scroll_up(int _n) {
+	printf("\e[%dS", _n);
+	while (_n--)
+		chx_redraw_line(CINST.scroll_pos - _n + CINST.num_rows - 1);
+	chx_draw_header();
+	chx_print_status();
+}
+
+void chx_scroll_down(int _n) {
+	printf("\e[%dT", _n);
+	while (_n--)
+		chx_redraw_line(CINST.scroll_pos + _n);
+	chx_draw_header();
+	chx_print_status();
+}
+
 void chx_update_cursor() {
-	if (CINST.cursor.pos < 0) {
-		CINST.cursor.sbpos = 0;
-		CINST.cursor.pos = 0;
-	} else if (CINST.cursor.pos > INT_MAX) {
-		CINST.cursor.pos = INT_MAX;
-	} else {
-		// scroll if pasting outside of visible screen
-		int spo = CINST.scroll_pos;
-		if (CINST.cursor.pos >= (CINST.scroll_pos + CINST.num_rows) * CINST.bytes_per_row) {
-			CINST.scroll_pos = CINST.cursor.pos / CINST.bytes_per_row - CINST.num_rows + 1;
-			if (CINST.scroll_pos < spo + CINST.num_rows) {
-				#ifdef CHX_SCROLL_SUPPORT
-					printf("\e[%liS", CINST.scroll_pos - spo);
-					for (int i = spo; i < CINST.scroll_pos; i++)
-						chx_redraw_line(i + CINST.num_rows);
-					chx_draw_header();
-					chx_print_status();
-				#else
-					chx_draw_contents();
-				#endif
-			} else {
+	CINST.cursor.line = CINST.cursor.pos / CINST.bytes_per_row;
+	if (CINST.cursor.pos < 0) CINST.cursor = (struct chx_cursor) {0};
+	else {
+		// scroll if past visible screen
+		int scroll_pos_prev = CINST.scroll_pos;
+		if (CINST.cursor.line >= CINST.scroll_pos + CINST.num_rows) {
+			CINST.scroll_pos = CINST.cursor.line - CINST.num_rows + 1;
+			#ifdef CHX_SCROLL_SUPPORT
+			if (CINST.scroll_pos < scroll_pos_prev + CINST.num_rows)
+				chx_scroll_up(CINST.scroll_pos - scroll_pos_prev);
+			else
 				chx_draw_contents();
-			}
-		} else if (CINST.cursor.pos < CINST.scroll_pos * CINST.bytes_per_row) {
-			CINST.scroll_pos = (CINST.cursor.pos / CINST.bytes_per_row > 0) ? CINST.cursor.pos / CINST.bytes_per_row : 0;
-			if (spo < CINST.scroll_pos + CINST.num_rows) {
-				#ifdef CHX_SCROLL_SUPPORT
-					printf("\e[%liT", spo - CINST.scroll_pos);
-					for (int i = CINST.scroll_pos; i < spo; i++)
-						chx_redraw_line(i);
-					chx_draw_header();
-					chx_print_status();
-				#else
-					chx_draw_contents();
-				#endif
-			} else {
+			#else
 				chx_draw_contents();
-			}
+			#endif
+		} else if (CINST.cursor.line < CINST.scroll_pos) {
+			CINST.scroll_pos = CINST.cursor.line;
+			#ifdef CHX_SCROLL_SUPPORT
+			if (scroll_pos_prev < CINST.scroll_pos + CINST.num_rows)
+				chx_scroll_down(scroll_pos_prev - CINST.scroll_pos);
+			else
+				chx_draw_contents();
+			#else
+				chx_draw_contents();
+			#endif
 		}
 	}
 	
@@ -73,15 +76,6 @@ void chx_update_cursor() {
 	// redraw cursor
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
 	fflush(stdout);
-}
-
-void chx_swap_endianness() {
-	CINST.endianness = !CINST.endianness;
-	if (CINST.show_inspector) {
-		chx_draw_extra();
-		cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
-		fflush(stdout);
-	}
 }
 
 void chx_redraw_line(long line) {
@@ -122,40 +116,6 @@ void chx_redraw_line(long line) {
 	}
 	
 	printf("\e[0m");
-	
-	// draw ascii preview
-	if (CINST.selected && sel_begin < CINST.scroll_pos * CINST.bytes_per_row)
-		printf(CHX_ASCII_SELECT_FORMAT);
-	
-	if (CINST.show_preview) {
-		cur_set(CHX_CONTENT_END, cur_y);
-		for (int i = line_start; i < line_start + CINST.bytes_per_row; i++) {
-			if (!(i % CINST.bytes_per_row))
-				cur_set(CHX_CONTENT_END, CHX_GET_Y(i));
-			
-			if (i == CINST.cursor.pos && !CINST.selected)
-				printf(CHX_ASCII_CUR_FORMAT);
-			
-			if (i < CINST.fdata.len) {
-				if (CINST.selected && i == sel_begin && sel_end != sel_begin)
-					printf(CHX_ASCII_SELECT_FORMAT);
-				
-				if (IS_PRINTABLE(CINST.fdata.data[i]))
-					printf("%c", CINST.fdata.data[i]);
-				else
-					printf("·");
-			} else
-				printf("•");
-		
-			if (CINST.selected) {
-				if (i == sel_end - 1)
-					printf("\e[0m");
-			} else if (i == CINST.cursor.pos)
-				printf("\e[0m");
-		}
-	}
-	
-	printf("\e[0m%-*c", CINST.group_spacing, ' ');
 	
 	// restore cursor position
 	cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
@@ -515,6 +475,9 @@ void chx_delete_hexchar() {
 	CINST.saved = 0;
 	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
 	
+	if (CINST.show_preview)
+		chx_draw_sidebar();
+	
 	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row);
 	fflush(stdout);
 }
@@ -579,7 +542,9 @@ void chx_set_ascii(char _c) {
 	CINST.saved = 0;
 	CINST.style_data[CINST.cursor.pos / 8] |= 0x80 >> (CINST.cursor.pos % 8);
 	
-	// update cursor and redraw line
+	if (CINST.show_preview)
+		chx_draw_sidebar();
+	
 	chx_redraw_line(CINST.cursor.pos / CINST.bytes_per_row);
 	fflush(stdout);
 }
@@ -822,6 +787,7 @@ void chx_add_instance(char* fpath) {
 		chx_get_char();
 		return;
 	};
+	
 	hdata.filename = memfork(fpath, str_len(fpath) + 1);
 	
 	// get window dimensions
@@ -831,7 +797,7 @@ void chx_add_instance(char* fpath) {
 	// setup instance
 	CHX_CUR_MAX_INSTANCE++;
 	CHX_SEL_INSTANCE = CHX_CUR_MAX_INSTANCE;
-	CINST.cursor = (struct CHX_CURSOR) {0, 0};
+	CINST.cursor = (struct chx_cursor) {0};
 	CINST.fdata = hdata;
 	CINST.style_data = calloc(1, hdata.len / 8 + (hdata.len % 8 != 0));
 	CINST.height = size.ws_row;
@@ -858,17 +824,17 @@ void chx_add_instance(char* fpath) {
 
 void chx_remove_instance(int _n) {
 	if (_n < 0 || _n > CHX_CUR_MAX_INSTANCE || !CHX_CUR_MAX_INSTANCE) return;
+	
 	CHX_CUR_MAX_INSTANCE--;
 	if (CHX_SEL_INSTANCE > CHX_CUR_MAX_INSTANCE)
 		CHX_SEL_INSTANCE = CHX_CUR_MAX_INSTANCE;
-	
-	printf("eS1 c\n");
 	
 	// empty struct
 	free(CHX_INSTANCES[_n].copy_buffer);
 	free(CHX_INSTANCES[_n].style_data);
 	free(CHX_INSTANCES[_n].fdata.data);
 	free(CHX_INSTANCES[_n].fdata.filename);
+	
 	CHX_INSTANCES[_n] = (struct CHX_INSTANCE) {0};
 	
 	// shift instances to remove spaces
@@ -891,14 +857,10 @@ int main(int argc, char** argv) {
 			return 0;
 		}
 		else if (cmp_str(argv[1], "-v") || cmp_str(argv[1], "--version")) {
-			printf("CAOIMH HEX EDITOR version 1.0.0\n");
+			printf("CAOIMH HEX EDITOR version 1.0.1\n");
 			return 0;
 		}
 	}
-	
-	// get window dimensions
-	struct winsize size;
-	ioctl(0, TIOCGWINSZ, (char*) &size);
 	
 	// load file
 	struct chx_finfo hdata = chx_import(argv[1]);
@@ -922,54 +884,26 @@ int main(int argc, char** argv) {
 	signal(SIGINT, chx_quit);
 	signal(SIGTSTP, chx_quit);
 	
-	// setup global instances
+	// setup initial instance
+	CHX_CUR_MAX_INSTANCE = -1;
+	CHX_SEL_INSTANCE = 0;
 	CHX_INSTANCES = (struct CHX_INSTANCE*) calloc(sizeof(struct CHX_INSTANCE), CHX_MAX_NUM_INSTANCES);
 	
-	// setup initial instance
-	CINST.cursor = (struct CHX_CURSOR) {0, 0};
-	CINST.fdata = hdata;
-	CINST.style_data = calloc(1, hdata.len / 8 + (hdata.len % 8 != 0));
-	CINST.height = size.ws_row;
-	CINST.width = size.ws_col;
-	CINST.x_offset = 0;
-	CINST.y_offset = 0;
-	CINST.bytes_per_row = CHX_BYTES_PER_ROW;
-	CINST.bytes_in_group = CHX_BYTES_IN_GROUP;
-	CINST.group_spacing = CHX_GROUP_SPACING;
-	CINST.min_row_num_len =
-	CINST.row_num_len = CHX_MIN_ROW_NUM_LEN;
-	CINST.num_rows = size.ws_row - PD;
-	CINST.endianness = CHX_DEFAULT_ENDIANNESS;
-	CINST.last_action.action.execute_void = fvoid;
-	CINST.last_action.params = NULL;
-	CINST.last_action.params_raw = NULL;
-	CINST.last_action.type = 0;
-	CINST.copy_buffer = NULL;
-	CINST.saved = 1;
+	chx_add_instance(argv[1]);
 	
 	// only show preview or inspector if it will fit on the screen
 	CINST.show_inspector = (CHX_PREVIEW_END + 28 > CINST.width) ? 0 : CHX_SHOW_INSPECTOR_ON_STARTUP;
 	CINST.show_preview = (CHX_PREVIEW_END > CINST.width) ? 0 : CHX_SHOW_PREVIEW_ON_STARTUP;
 	
-	// if the screen cant fit the contents, remove one byte until it can be displayed
+	// if the screen cannot fit the contents, remove one byte until it can be displayed
 	while (CHX_CONTENT_END > CINST.width && CINST.bytes_per_row) {
 		CINST.bytes_in_group = 1;
 		CINST.bytes_per_row--;
 	}
 	
 	// alert user if application cannot be functionally operated
-	if (CINST.num_rows < 2 || !CINST.bytes_per_row) {
-		// re-enable key echoing
-		struct termios old = {0};
-		tcgetattr(0, &old);
-		old.c_lflag |= ECHO;
-		tcsetattr(0, TCSADRAIN, &old);
-		
-		// exit
-		texit();
-		printf("terminal is too small to run application.\n");
-		return 0;
-	}
+	if (CINST.num_rows < 2 || !CINST.bytes_per_row)
+		chx_exit_with_message("terminal is too small to run application.\n");
 	
 	// draw elements
 	chx_draw_all();
@@ -977,5 +911,6 @@ int main(int argc, char** argv) {
 	// call main loop
 	chx_main();
 	
+	texit();
 	return 0;
 }

@@ -162,6 +162,21 @@ void chx_cursor_select_left() {
 	chx_update_cursor();
 }
 
+void chx_exit_with_message(char* _msg) {
+	// re-enable key echoing
+	struct termios old = {0};
+	tcgetattr(0, &old);
+	old.c_lflag |= ECHO;
+	tcsetattr(0, TCSADRAIN, &old);
+	
+	// exit
+	cls();
+	cur_set(0, 0);
+	texit();
+	printf(_msg);
+	exit(0);
+}
+
 void chx_exit() {
 	// re-enable key echoing
 	struct termios old = {0};
@@ -174,6 +189,39 @@ void chx_exit() {
 	cur_set(0, 0);
 	texit();
 	exit(0);
+}
+
+void chx_swap_endianness() {
+	CINST.endianness = !CINST.endianness;
+	if (CINST.show_inspector) {
+		chx_draw_extra();
+		cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+		fflush(stdout);
+	}
+}
+
+void chx_set_endianness_global(char _np, char** _pl) {
+	if (!_np) return;
+	switch (_pl[0][0]) {
+		case 'l':
+		case 'L':
+			for (int i = 0; i <= CHX_CUR_MAX_INSTANCE; i++)
+				CHX_INSTANCES[i].endianness = 1;
+			break;
+		case 'b':
+		case 'B':
+			for (int i = 0; i <= CHX_CUR_MAX_INSTANCE; i++)
+				CHX_INSTANCES[i].endianness = 0;
+			break;
+		default:
+			return;
+	}
+	
+	if (CINST.show_inspector) {
+		chx_draw_extra();
+		cur_set(CHX_CURSOR_X, CHX_CURSOR_Y);
+		fflush(stdout);
+	}
 }
 
 long chx_abs(long _n) {
@@ -226,7 +274,7 @@ int str_to_num(char* _s) {
 	long total = 0;
 	for (int i = 0; _s[i]; i++)
 		total = total * 10 + _s[i] - 0x30;
-	return (total > INT_MAX) ? INT_MAX : total;
+	return total;
 }
 
 int str_to_hex(char* _s) {
@@ -236,7 +284,7 @@ int str_to_hex(char* _s) {
 		if ((_s[i] ^ 0x60) < 7) _s[i] -= 32;
 		total += (_s[i] > 0x40) ? _s[i] - 0x37 : _s[i] - 0x30;
 	}
-	return (total > INT_MAX) ? INT_MAX : total;
+	return total;
 }
 
 int str_len(char* _s) {
@@ -293,19 +341,19 @@ void chx_to_line_end() {
 }
 
 void chx_to_start() {
-	CINST.cursor.pos = 0;
-	CINST.cursor.sbpos = 0;
-	CINST.scroll_pos = 0;
-	cls();
+	CINST.cursor = (struct chx_cursor) {0};
+	chx_update_cursor();
 	chx_draw_all();
 }
 
 void chx_to_end() {
 	CINST.cursor.pos = CINST.fdata.len - 1;
 	CINST.cursor.sbpos = 0;
-	int new_scroll = (CINST.cursor.pos / CINST.bytes_per_row) - CINST.num_rows / 2;
-	CINST.scroll_pos = (new_scroll >= 0) ? new_scroll : 0;
-	cls();
+	chx_update_cursor();
+	
+	if (CINST.cursor.line >= CINST.num_rows)
+		CINST.scroll_pos = CINST.cursor.line - CINST.num_rows / 2;
+	
 	chx_draw_all();
 }
 
@@ -402,11 +450,7 @@ void chx_page_up() {
 	if (CINST.scroll_pos > 0) {
 		CINST.scroll_pos--;
 		#ifdef CHX_SCROLL_SUPPORT
-			printf("\e[1T");
-			chx_redraw_line(CINST.scroll_pos + CINST.num_rows);
-			chx_redraw_line(CINST.scroll_pos + CINST.num_rows + 1);
-			chx_draw_header();
-			chx_print_status();
+			chx_scroll_down(1);
 		#else
 			chx_draw_contents();
 		#endif
@@ -415,19 +459,13 @@ void chx_page_up() {
 }
 
 void chx_page_down() {
-	if (CINST.scroll_pos + CINST.num_rows < INT_MAX / CINST.bytes_per_row) {
-		CINST.scroll_pos++;
-		#ifdef CHX_SCROLL_SUPPORT
-			printf("\e[1S");
-			chx_redraw_line(CINST.scroll_pos + CINST.num_rows);
-			chx_redraw_line(CINST.scroll_pos + CINST.num_rows - 1);
-			chx_draw_header();
-			chx_print_status();
-		#else
-			chx_draw_contents();
-		#endif
-		chx_cursor_move_down();
-	}
+	CINST.scroll_pos++;
+	#ifdef CHX_SCROLL_SUPPORT
+		chx_scroll_up(1);
+	#else
+		chx_draw_contents();
+	#endif
+	chx_cursor_move_down();
 }
 
 void chx_toggle_inspector() {

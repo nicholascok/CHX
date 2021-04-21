@@ -136,6 +136,7 @@ struct chx_void_command chx_void_commands[] = {
 /* INTERPRETER COMMANDS (WITH PARAMS) */
 struct chx_command chx_commands[] = {
 	(struct chx_command) {chx_set_inst, "to"},
+	(struct chx_command) {chx_set_endianness_global, "ge"},
 	(struct chx_command) {chx_save_as, "save"},
 	(struct chx_command) {chx_save_as, "sav"},
 	(struct chx_command) {chx_save_as, "w"},

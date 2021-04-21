@@ -127,8 +127,9 @@ struct chx_command {
 	char* str;
 };
 
-struct CHX_CURSOR {
+struct chx_cursor {
 	long pos;
+	long line;
 	char sbpos;
 };
 
@@ -147,7 +148,7 @@ struct CHX_INSTANCE {
 	int copy_buffer_len;
 	char* copy_buffer;
 	struct chx_finfo fdata;
-	struct CHX_CURSOR cursor;
+	struct chx_cursor cursor;
 	struct chx_last_action last_action;
 	char bytes_per_row;
 	char bytes_in_group;
@@ -171,9 +172,9 @@ struct CHX_INSTANCE {
 	char show_preview;
 };
 
-struct CHX_INSTANCE* CHX_INSTANCES = 0;
-int CHX_CUR_MAX_INSTANCE = 0;
-int CHX_SEL_INSTANCE = 0;
+struct CHX_INSTANCE* CHX_INSTANCES;
+int CHX_CUR_MAX_INSTANCE;
+int CHX_SEL_INSTANCE;
 
 void (*chx_keybinds_global[])(void);
 void (*chx_keybinds_mode_command[])(void);
@@ -195,6 +196,9 @@ void chx_prompt_command();
 struct chx_key chx_get_key();
 char chx_get_char();
 void chx_get_str();
+
+void chx_scroll_up(int _n);
+void chx_scroll_down(int _n);
 
 void chx_print_status();
 void chx_update_cursor();
