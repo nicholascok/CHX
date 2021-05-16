@@ -2,6 +2,18 @@
 A lightweight terminal hex editor.  
 usage: `chx <filepath>`
 
+## Quickstart Guide
+to install chx:  
+`git clone https://github.com/nicholascok/CHX.git chx`  
+`cd chx`  
+`make`  
+`sudo make install`  
+
+(optional)  
+to remove source files:  
+`cd ..`  
+`rm -r chx`  
+
 ## Example
 ![screenshot of chx running on ubuntu VM](./resources/capture.webp "YOOOOOOOOO")
 
