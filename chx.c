@@ -843,6 +843,10 @@ void chx_remove_instance(int _n) {
 			CHX_INSTANCES[i] = CHX_INSTANCES[i + 1];
 }
 
+void chx_quit_sigh(int _) {
+	chx_quit();
+}
+
 int main(int argc, char** argv) {
 	// allow printing of wide chars
 	setlocale(LC_ALL, "");
@@ -881,8 +885,8 @@ int main(int argc, char** argv) {
 	tcsetattr(0, TCSANOW, &old);
 	
 	// override ctrl+z/ctrl+c termination
-	signal(SIGINT, chx_quit);
-	signal(SIGTSTP, chx_quit);
+	signal(SIGINT, chx_quit_sigh);
+	signal(SIGTSTP, chx_quit_sigh);
 	
 	// setup initial instance
 	CHX_CUR_MAX_INSTANCE = -1;

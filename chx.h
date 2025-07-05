@@ -181,7 +181,7 @@ void (*chx_keybinds_mode_command[])(void);
 void* func_exceptions[];
 struct chx_command chx_commands[];
 
-void fvoid() {};
+void fvoid() {}
 
 struct chx_finfo chx_import(char* fpath);
 void chx_export(char* fpath);
@@ -195,7 +195,7 @@ void chx_prompt_command();
 
 struct chx_key chx_get_key();
 char chx_get_char();
-void chx_get_str();
+void chx_get_str(char* _buf, int _len);
 
 void chx_scroll_up(int _n);
 void chx_scroll_down(int _n);
@@ -208,7 +208,7 @@ void chx_draw_sidebar();
 void chx_draw_extra();
 void chx_draw_header();
 void chx_draw_all();
-void chx_redraw_line();
+void chx_redraw_line(long line);
 
 void chx_set_hexchar(char _c);
 void chx_type_hexchar(char _c);
